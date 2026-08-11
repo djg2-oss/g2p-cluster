@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grok-Class Dual Stack · Edge</title>
+  <style>
+    :root {
+      --bg: #0c0f14;
+      --panel: #141a22;
+      --line: #243041;
+      --fg: #e8eef7;
+      --muted: #8b9bb0;
+      --accent: #6ee7b7;
+      --accent2: #7dd3fc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #1a2838, var(--bg));
+      color: var(--fg);
+      min-height: 100dvh;
+    }
+    header {
+      border-bottom: 1px solid var(--line);
+      padding: 1rem 1.25rem;
+      display: flex; gap: 1rem; align-items: center; justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    h1 { font-size: 0.95rem; margin: 0; letter-spacing: 0.04em; }
+    .badge {
+      font-size: 0.7rem; color: var(--muted);
+      border: 1px solid var(--line); padding: 0.25rem 0.5rem; border-radius: 999px;
+    }
+    main { max-width: 720px; margin: 0 auto; padding: 1.25rem; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 14px; padding: 1rem; margin-bottom: 1rem;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+    label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 0.35rem; }
+    textarea {
+      width: 100%; min-height: 100px; resize: vertical;
+      background: #0a0e14; color: var(--fg); border: 1px solid var(--line);
+      border-radius: 10px; padding: 0.75rem; font: inherit;
+    }
+    button {
+      margin-top: 0.75rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #062016; border: 0; border-radius: 999px; padding: 0.65rem 1.1rem;
+      font-weight: 700; cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: wait; }
+    pre {
+      white-space: pre-wrap; word-break: break-word; font-size: 0.78rem;
+      color: #c5d4e8; margin: 0; line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>GROK-CLASS EDGE · 2 FE + 2 BE</h1>
+    <span class="badge" id="fe-id">fe</span>
+  </header>
+  <main>
+    <div class="card">
+      <div class="grid">
+        <div>
+          <label>Topology</label>
+          <pre id="topo">loading…</pre>
+        </div>
+        <div>
+          <label>Backend (via LB)</label>
+          <pre id="health">loading…</pre>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <label>Message → META on backends</label>
+      <textarea id="q" placeholder="solve 2x^2+3x-5=0 · career vs offer · build an api"></textarea>
+      <button type="button" id="go">Run heavy route</button>
+      <pre id="out" style="margin-top:1rem"></pre>
+    </div>
+    <div class="card">
+      <label>Converged design</label>
+      <pre>LB:8080 → FE×2 + BE×2
+A Bayes · B Fixed-point · C Sparse graph · META
+Stop: no further topology angle without new model pretrain.</pre>
+    </div>
+  </main>
+  <script>
+    document.getElementById("fe-id").textContent = "frontend :" + (location.port || "80");
+    async function j(url, opts) {
+      const r = await fetch(url, opts);
+      const t = await r.text();
+      try { return JSON.parse(t); } catch { return { raw: t, status: r.status }; }
+    }
+    async function refresh() {
+      try {
+        document.getElementById("topo").textContent = JSON.stringify(await j("/api/topology"), null, 2);
+      } catch (e) {
+        document.getElementById("topo").textContent = String(e);
+      }
+      try {
+        document.getElementById("health").textContent = JSON.stringify(await j("/api/health"), null, 2);
+      } catch (e) {
+        document.getElementById("health").textContent = String(e);
+      }
+    }
+    document.getElementById("go").onclick = async () => {
+      const btn = document.getElementById("go");
+      const text = document.getElementById("q").value.trim();
+      if (!text) return;
+      btn.disabled = true;
+      try {
+        const r = await j("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        document.getElementById("out").textContent = JSON.stringify(r, null, 2);
+      } catch (e) {
+        document.getElementById("out").textContent = String(e);
+      }
+      btn.disabled = false;
+      refresh();
+    };
+    refresh();
+    setInterval(refresh, 8000);
+  </script>
+</body>
+</html>

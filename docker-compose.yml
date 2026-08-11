@@ -1,0 +1,77 @@
+# Best hosting arrangement: 2 frontends + 2 backends + edge LB
+# Usage: docker compose up -d --build
+# Edge: http://HOST:8080
+
+services:
+  be1:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      HOST_ID: be-1
+      PORT: 3001
+      PEER_URL: http://be2:3002
+    command: ["node", "src/server/backend.mjs"]
+    restart: unless-stopped
+    expose:
+      - "3001"
+
+  be2:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      HOST_ID: be-2
+      PORT: 3002
+      PEER_URL: http://be1:3001
+    command: ["node", "src/server/backend.mjs"]
+    restart: unless-stopped
+    expose:
+      - "3002"
+
+  fe1:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      HOST_ID: fe-1
+      PORT: 5173
+    command: ["node", "deploy/fe/static-server.mjs"]
+    restart: unless-stopped
+    expose:
+      - "5173"
+
+  fe2:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      HOST_ID: fe-2
+      PORT: 5174
+    command: ["node", "deploy/fe/static-server.mjs"]
+    restart: unless-stopped
+    expose:
+      - "5174"
+
+  lb:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./:/app
+    environment:
+      LB_PORT: 8080
+      BACKENDS: http://be1:3001,http://be2:3002
+      FRONTENDS: http://fe1:5173,http://fe2:5174
+    command: ["node", "deploy/lb/proxy.mjs"]
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - be1
+      - be2
+      - fe1
+      - fe2
