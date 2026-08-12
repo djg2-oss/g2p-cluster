@@ -4,6 +4,12 @@
  */
 import http from "node:http";
 import { createHash } from "node:crypto";
+import {
+  buildDraft,
+  buildRefine,
+  runSequentialPipeline,
+  ENGINE_VERSION,
+} from "../../deploy/engines/dual-engine.mjs";
 
 const PORT = Number(process.env.PORT || 3001);
 const HOST_ID = process.env.HOST_ID || `be-${PORT}`;
@@ -239,97 +245,14 @@ function metaRoute(text) {
 }
 
 
-/**
- * Sequential dual-engine quality path (NOT parallel load-balance).
- * Stage 1 DRAFT on this host → Stage 2 REFINE on peer (or local if no peer).
- * Used for better accuracy, not faster fan-out.
- */
+
+/** @deprecated local names — use dual-engine module */
 function draftAnswer(text, route) {
-  const w = route.winner;
-  const conf = route.confidence;
-  const lines = [
-    `[DRAFT · ${HOST_ID}] specialist=${w} conf=${conf}`,
-    `META votes: A=${route.builds?.A?.winner} B=${route.builds?.B?.winner} C=${route.builds?.C?.winner}`,
-    "",
-  ];
-  if (w === "math") {
-    lines.push(
-      "Math draft: identify knowns/unknowns, choose method, solve step-by-step, box answer.",
-      "Show check: plug back or differentiate as needed.",
-    );
-  } else if (w === "life") {
-    lines.push(
-      "Life draft: name the decision, constraints, 2–3 options, recommend one next action.",
-      "Keep calm; no extreme language.",
-    );
-  } else if (w === "build") {
-    lines.push(
-      "Build draft: goal, stack guess, smallest shippable slice, file-level plan.",
-      "Prefer working code over essays.",
-    );
-  } else if (w === "phenome" || w === "media") {
-    lines.push(
-      "Media draft: if video intent → Director plan (preset/camera/light); else describe pipeline.",
-    );
-  } else {
-    lines.push(
-      "Companion draft: short clear answer, warm but not extreme, invite one precise follow-up.",
-    );
-  }
-  lines.push("", `User: ${text.slice(0, 400)}`);
-  return {
-    stage: "draft",
-    host: HOST_ID,
-    winner: w,
-    confidence: conf,
-    content: lines.join("\n"),
-    route,
-  };
+  return buildDraft({ host: HOST_ID, text, route });
 }
 
 function refineAnswer(text, draftPayload) {
-  const draft = draftPayload?.content || "";
-  const w = draftPayload?.winner || "companion";
-  const conf = draftPayload?.confidence || "medium";
-  const holes = [];
-  if (w === "math" && !/check|verify|plug/i.test(draft)) holes.push("add verification step");
-  if (w === "life" && !/next action|option/i.test(draft)) holes.push("force one concrete next action");
-  if (w === "build" && !/file|slice|step/i.test(draft)) holes.push("name first implementable slice");
-  if (draft.length < 80) holes.push("expand thin draft");
-  if (conf === "low") holes.push("raise confidence by re-routing specialists");
-
-  // Optional re-route on low confidence
-  let route2 = draftPayload?.route;
-  if (conf === "low" || holes.length >= 2) {
-    route2 = metaRoute(text + " " + draft.slice(0, 120));
-  }
-
-  const refined = [
-    `[REFINE · ${HOST_ID}] after draft from ${draftPayload?.host || "peer"}`,
-    `Path: ${route2?.winner || w} · conf ${route2?.confidence || conf}`,
-    holes.length ? `Fixes: ${holes.join("; ")}` : "Draft solid — polish only.",
-    "",
-    "— Refined output —",
-    draft
-      .replace(/^\[DRAFT[^\]]*\]/m, `[FINAL · ${HOST_ID}]`)
-      .trim(),
-    "",
-    holes.length
-      ? `Quality pass applied (${holes.length} improvements).`
-      : "Quality pass: structure + clarity only.",
-    "Dual-engine mode: sequential draft→refine (not parallel race).",
-  ].join("\n");
-
-  return {
-    stage: "refine",
-    host: HOST_ID,
-    winner: route2?.winner || w,
-    confidence: route2?.confidence || conf,
-    content: refined,
-    holes,
-    priorHost: draftPayload?.host,
-    route: route2,
-  };
+  return buildRefine({ host: HOST_ID, text, draftPayload });
 }
 
 async function peerRefine(text, draftPayload) {
@@ -342,9 +265,9 @@ async function peerRefine(text, draftPayload) {
       signal: AbortSignal.timeout(8000),
     });
     if (!r.ok) throw new Error(`peer HTTP ${r.status}`);
-    return await r.json();
+    const j = await r.json();
+    return j;
   } catch (e) {
-    // Fallback local refine if peer down
     const local = refineAnswer(text, draftPayload);
     local.peerError = String(e);
     local.fallback = "local-refine";
@@ -356,28 +279,19 @@ async function qualityPipeline(text) {
   metrics.pipelines++;
   const t0 = performance.now();
   const route = metaRoute(text);
-  const draft = draftAnswer(text, route);
-  metrics.refines++;
-  const refined = await peerRefine(text, draft);
-  const ms = performance.now() - t0;
-  return {
-    ok: true,
-    mode: "sequential-draft-refine",
-    topology: "dual-be-pipeline",
-    draftHost: draft.host,
-    refineHost: refined.host,
-    winner: refined.winner,
-    confidence: refined.confidence,
-    content: refined.content,
-    holes: refined.holes || [],
-    draftPreview: draft.content.slice(0, 280),
-    peerError: refined.peerError,
-    fallback: refined.fallback,
-    ms: +ms.toFixed(3),
-    note: "Engines run in series: draft then refine — quality over parallel speed.",
-  };
+  const out = await runSequentialPipeline({
+    host: HOST_ID,
+    text,
+    route,
+    peerRefine: (txt, draft) => {
+      metrics.refines++;
+      return peerRefine(txt, draft);
+    },
+  });
+  out.ms = +(performance.now() - t0).toFixed(3);
+  out.engine = out.engine || ENGINE_VERSION;
+  return out;
 }
-
 
 function json(res, code, body) {
   const data = JSON.stringify(body);
@@ -548,7 +462,8 @@ const server = http.createServer(async (req, res) => {
       lb: "8080",
       builds: ["A_bayes", "B_fixedpoint", "C_sparse_graph", "META"],
       host: HOST_ID,
-      note: "Best topology without new model pretrain",
+      note: "Dual-engine sequential draft→critic→edit + 2FE RR",
+      engine: ENGINE_VERSION,
     });
   }
 
