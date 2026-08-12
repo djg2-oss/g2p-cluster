@@ -3,29 +3,78 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G2P Dual-Engine Metrics</title>
+  <title>G2P Metrics</title>
   <style>
-    :root { --bg:#0c0f14; --panel:#141a22; --line:#243041; --fg:#e8eef7; --muted:#8b9bb0; --ok:#6ee7b7; --hi:#7dd3fc; }
+    :root {
+      --black: #000;
+      --panel: #0d0d0d;
+      --gold: #d4af37;
+      --gold-bright: #f0d78c;
+      --platinum: #e8e6e1;
+      --platinum-gold: #c9b896;
+      --muted: #8a8070;
+      --line: #3d3420;
+    }
     * { box-sizing: border-box; }
-    body { margin:0; font-family: ui-sans-serif, system-ui, sans-serif; background:var(--bg); color:var(--fg); min-height:100dvh; }
-    header { padding:1rem 1.25rem; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.75rem; }
-    h1 { font-size:1rem; margin:0; }
-    main { max-width:960px; margin:0 auto; padding:1.25rem; display:grid; gap:1rem; }
-    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:.75rem; }
-    .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:1rem; }
-    .label { font-size:.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
-    .val { font-size:1.4rem; font-weight:700; color:var(--ok); margin-top:.25rem; }
-    pre { font-size:.72rem; color:#c5d4e8; white-space:pre-wrap; word-break:break-word; margin:0; max-height:320px; overflow:auto; }
-    a { color:var(--hi); }
-    button { background:linear-gradient(135deg,var(--ok),var(--hi)); border:0; border-radius:999px; padding:.5rem 1rem; font-weight:700; cursor:pointer; }
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: radial-gradient(800px 400px at 0% 0%, rgba(212,175,55,0.1), transparent), #000;
+      color: var(--platinum);
+      min-height: 100dvh;
+    }
+    .gold-text {
+      background: linear-gradient(165deg, #fff8e0, #f0d78c, #d4af37, #a67c00, #f5e6a8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-stroke: 0.5px rgba(232,230,225,0.5);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+    header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    h1 { font-size: 1rem; margin: 0; }
+    main { max-width: 960px; margin: 0 auto; padding: 1.25rem; display: grid; gap: 1rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
+    .card {
+      background: var(--panel);
+      border: 1px solid transparent;
+      border-radius: 12px;
+      padding: 1rem;
+      background:
+        linear-gradient(#0d0d0d, #0d0d0d) padding-box,
+        linear-gradient(135deg, #f5f2ea, #d4af37, #8a7340, #e8e6e1) border-box;
+    }
+    .label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .val { font-size: 1.35rem; font-weight: 700; color: var(--gold-bright); margin-top: 0.25rem; }
+    pre { font-size: 0.72rem; color: var(--platinum-gold); white-space: pre-wrap; word-break: break-word; margin: 0; max-height: 320px; overflow: auto; }
+    a { color: var(--gold); text-decoration: none; margin-left: 0.75rem; }
+    button {
+      background: linear-gradient(165deg, #f5f2ea, #e8d5a3, #d4af37, #a0893a, #e6d19a);
+      color: #0a0800;
+      border: 1px solid #f0e6c8;
+      border-radius: 999px;
+      padding: 0.5rem 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(212,175,55,0.3), inset 0 1px 0 rgba(255,255,255,0.4);
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>G2P Dual-Engine Metrics · p50/p95 · quality</h1>
+    <h1><span class="gold-text">G2P</span> <span style="color:#c9b896;font-weight:600">METRICS</span></h1>
     <div>
       <button type="button" id="refresh">Refresh</button>
-      <a href="/">UI</a>
+      <a href="/">Chat</a>
     </div>
   </header>
   <main>
@@ -48,13 +97,11 @@
       return `<div class="card"><div class="label">${label}</div><div class="val">${val ?? "—"}</div></div>`;
     }
     async function load() {
-      const [a, b, v, lb] = await Promise.all([
+      const [a, b, v] = await Promise.all([
         j("/api/metrics"),
         j("http://127.0.0.1:3002/api/metrics").catch(() => ({})),
         j("http://127.0.0.1:3003/api/metrics").catch(() => ({})),
-        j("/lb/health"),
       ]);
-      // Prefer edge metrics (hits a BE via RR)
       const m = a.pipeline ? a : b;
       const p = m.pipeline || {};
       document.getElementById("cards").innerHTML = [
@@ -68,7 +115,6 @@
         card("Pipe cache hits", m.pipelineCacheHits),
       ].join("");
       document.getElementById("be1").textContent = JSON.stringify(a, null, 2);
-      // direct ports only work when page served same host with ports open — also try relative fail soft
       document.getElementById("be2").textContent = JSON.stringify(b, null, 2);
       document.getElementById("bev").textContent = JSON.stringify(v, null, 2);
     }

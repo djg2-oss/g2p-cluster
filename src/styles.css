@@ -2,21 +2,21 @@
 @import "tw-animate-css";
 
 @theme {
-  --color-bg: #0a0a0b;
-  --color-bg-elevated: #121214;
-  --color-bg-subtle: #1a1a1e;
-  --color-fg: #f4f4f5;
-  --color-fg-muted: #a1a1aa;
-  --color-fg-subtle: #71717a;
-  --color-border: color-mix(in oklab, var(--color-fg) 12%, transparent);
-  --color-border-strong: color-mix(in oklab, var(--color-fg) 22%, transparent);
-  --color-accent: #c8ccd4;
-  --color-accent-fg: #0a0a0b;
-  --color-math: #7dd3c0;
-  --color-life: #9db4d0;
-  --color-companion: #d4d0c8;
-  --color-danger: #e07a6a;
-  --color-success: #7cb98a;
+  --color-bg: #000000;
+  --color-bg-elevated: #0d0d0d;
+  --color-bg-subtle: #121212;
+  --color-fg: #f5f2ea;
+  --color-fg-muted: #c9b896;
+  --color-fg-subtle: #8a8070;
+  --color-border: color-mix(in oklab, #d4af37 28%, transparent);
+  --color-border-strong: color-mix(in oklab, #e8e6e1 45%, #d4af37);
+  --color-accent: #d4af37;
+  --color-accent-fg: #0a0800;
+  --color-math: #e8d5a3;
+  --color-life: #c9b896;
+  --color-companion: #f0d78c;
+  --color-danger: #c45c4a;
+  --color-success: #c9a227;
   --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --radius-xs: 4px;
@@ -36,7 +36,9 @@
   body {
     margin: 0;
     min-height: 100dvh;
-    background: var(--color-bg);
+    background:
+      radial-gradient(900px 420px at 8% -8%, rgba(212, 175, 55, 0.1), transparent 55%),
+      #000000;
     color: var(--color-fg);
     font-family: var(--font-sans);
     line-height: 1.5;
@@ -46,6 +48,59 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+}
+
+/* G2P metallic gold brand utilities */
+.g2p-gold-text {
+  background: linear-gradient(
+    165deg,
+    #fff8e0 0%,
+    #f0d78c 18%,
+    #d4af37 42%,
+    #a67c00 58%,
+    #f5e6a8 78%,
+    #c9a227 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 0.55px rgba(232, 230, 225, 0.5);
+  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.22));
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.g2p-gold-outline {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#0d0d0d, #0d0d0d) padding-box,
+    linear-gradient(135deg, #f5f2ea, #d4af37, #8a7340, #e8e6e1, #c9a227) border-box;
+  box-shadow:
+    0 0 0 1px rgba(212, 175, 55, 0.12),
+    inset 0 1px 0 rgba(245, 242, 234, 0.06);
+}
+
+.g2p-gold-btn {
+  background: linear-gradient(
+    165deg,
+    #f5f2ea 0%,
+    #e8d5a3 22%,
+    #d4af37 48%,
+    #a0893a 70%,
+    #e6d19a 100%
+  );
+  color: #0a0800;
+  border: 1px solid #f0e6c8;
+  box-shadow:
+    0 0 0 1px rgba(232, 230, 225, 0.3),
+    0 4px 16px rgba(212, 175, 55, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.g2p-gold-btn:hover {
+  filter: brightness(1.06);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -62,6 +117,6 @@
   width: 6px;
 }
 .agent-scroll::-webkit-scrollbar-thumb {
-  background: color-mix(in oklab, var(--color-fg) 18%, transparent);
+  background: linear-gradient(#9a7b2f, #d4af37);
   border-radius: 999px;
 }
