@@ -113,8 +113,20 @@ function extractSignals(text) {
   };
 }
 
+async function readRawBody(req) {
+  const chunks = [];
+  let len = 0;
+  for await (const chunk of req) {
+    chunks.push(chunk);
+    len += chunk.length;
+    if (len > 32_000) break;
+  }
+  if (!len) return "";
+  return Buffer.concat(chunks, len).toString("utf8");
+}
+
 async function readJsonBody(req) {
-  const raw = await readTextBody(req);
+  const raw = await readRawBody(req);
   if (!raw) return {};
   try {
     return JSON.parse(raw);
@@ -124,20 +136,12 @@ async function readJsonBody(req) {
 }
 
 async function readTextBody(req) {
-  // PERF: accumulate buffers once
-  const chunks = [];
-  let len = 0;
-  for await (const chunk of req) {
-    chunks.push(chunk);
-    len += chunk.length;
-    if (len > 32_000) break; // hard cap
-  }
-  if (!len) return "";
-  const raw = Buffer.concat(chunks, len).toString("utf8");
+  const raw = await readRawBody(req);
+  if (!raw) return "";
   if (raw.charCodeAt(0) === 123) {
-    // '{'
     try {
-      return JSON.parse(raw).text || "";
+      const j = JSON.parse(raw);
+      return j.text || j.prompt || "";
     } catch {
       return raw;
     }
@@ -314,6 +318,7 @@ async function peerRefine(text, draftPayload) {
   }
 }
 
+
 async function qualityPipeline(text, opts = {}) {
   metrics.pipelines++;
   const t0 = performance.now();
@@ -325,7 +330,6 @@ async function qualityPipeline(text, opts = {}) {
     }
   }
 
-  // Role pin: if this host is refine-only, bounce draft preference note
   const route = metaRoute(text);
   const out = await runSequentialPipeline({
     host: HOST_ID,
@@ -333,17 +337,18 @@ async function qualityPipeline(text, opts = {}) {
     route,
     peerRefine: async (txt, draft) => {
       metrics.refines++;
-      // Prefer peer when we are draft-primary; if we are refine role and no peer, local
       if (ENGINE_ROLE === "refine" && !PEER) return refineAnswer(txt, draft);
       return peerRefine(txt, draft);
     },
   });
 
-  // Optional Engine-V (third hop)
-  if (VERIFY_URL || ENGINE_ROLE === "verify" || opts.verify) {
+  // Verify hop only when requested (?verify=1 / body.verify) — not every call
+  const wantVerify = opts.verify === true;
+
+  if (wantVerify) {
     metrics.verifies++;
     try {
-      if (VERIFY_URL) {
+      if (VERIFY_URL && ENGINE_ROLE !== "verify") {
         const r = await fetch(`${VERIFY_URL}/api/verify`, {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -357,6 +362,8 @@ async function qualityPipeline(text, opts = {}) {
           out.verifyHost = v.host;
           out.verified = true;
           out.flags = v.flags;
+        } else {
+          out.verifyError = `verify HTTP ${r.status}`;
         }
       } else {
         const v = buildVerify({ host: HOST_ID, text, refined: out });
@@ -374,7 +381,6 @@ async function qualityPipeline(text, opts = {}) {
   out.ms = +(performance.now() - t0).toFixed(3);
   out.engine = out.engine || ENGINE_VERSION;
   out.role = ENGINE_ROLE;
-  out.draftRole = ENGINE_ROLE === "refine" ? "peer-or-self" : HOST_ID;
   pushSample(metrics.pipelineMs, out.ms);
   if (typeof out.quality === "number") pushSample(metrics.qualities, out.quality);
   if (!opts.noCache && out.ok !== false) pipelineCacheSet(cacheKey, out);
@@ -471,7 +477,6 @@ const server = http.createServer(async (req, res) => {
     const t0 = performance.now();
     const text = await readTextBody(req);
     const result = metaRoute(text);
-    // PERF: skip sha1 on cached hits
     if (!result.cached) {
       result.trace = createHash("sha1")
         .update(text + HOST_ID)
@@ -499,8 +504,6 @@ const server = http.createServer(async (req, res) => {
         `A=${route.builds.A.winner} B=${route.builds.B.winner} C=${route.builds.C.winner}`,
         "",
         "Heavy META selected this specialist path.",
-        "Optional: attach external frontier model API on BE for full generation.",
-        "Routing/verify envelope is local and multi-host ready.",
         "",
         `You said: ${text.slice(0, 240)}`,
       ].join("\n"),
@@ -509,8 +512,6 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-
-
   if (url.pathname === "/api/refine" && req.method === "POST") {
     metrics.refines++;
     const body = await readJsonBody(req);
@@ -518,59 +519,79 @@ const server = http.createServer(async (req, res) => {
     if (body.stage === "refine-only" && body.draft) {
       return json(res, 200, refineAnswer(text, body.draft));
     }
-    // Full local draft+refine if called alone
     const route = metaRoute(text);
     const draft = draftAnswer(text, route);
     return json(res, 200, refineAnswer(text, draft));
+  }
+
+  if (url.pathname === "/api/verify" && req.method === "POST") {
+    metrics.verifies++;
+    const body = await readJsonBody(req);
+    const text = String(body.text || "");
+    const refined = body.refined || body.draft || {
+      content: body.content || "",
+      winner: body.winner || "companion",
+    };
+    return json(res, 200, buildVerify({ host: HOST_ID, text, refined }));
   }
 
   if (url.pathname === "/api/pipeline" && req.method === "POST") {
     const body = await readJsonBody(req);
     const text = String(body.text || body.prompt || "");
     if (!text.trim()) return json(res, 400, { error: "text required" });
-    const out = await qualityPipeline(text);
+    const verify =
+      body.verify === true ||
+      body.verify === "1" ||
+      url.searchParams.get("verify") === "1";
+    const out = await qualityPipeline(text, {
+      verify,
+      noCache: body.noCache === true,
+    });
     return json(res, 200, out);
+  }
+
+  if (url.pathname === "/api/video-plan" && req.method === "POST") {
+    const body = await readJsonBody(req);
+    const text = String(body.text || body.prompt || "");
+    if (!text.trim()) return json(res, 400, { error: "text required" });
+    const draft = {
+      stage: "draft",
+      host: HOST_ID,
+      winner: "media",
+      confidence: "high",
+      content: [
+        `[DRAFT · ${HOST_ID}] Video Director`,
+        `User: ${text.slice(0, 400)}`,
+        "Expand preset/camera/light; peer refines params; RunPod submits GPU job.",
+      ].join("\n"),
+      route: metaRoute(text + " video cinematic"),
+    };
+    const refined = await peerRefine(text, draft);
+    return json(res, 200, {
+      ok: true,
+      mode: "video-director-dual",
+      draft,
+      refined,
+      note: "Plan only — GPU via RunPod / Agent G2P Director",
+    });
   }
 
   if (url.pathname === "/api/bake") {
     return json(res, 200, {
       host: HOST_ID,
-      summary: {
-        once: 20,
-        recurring: 8,
-        note: "Full schedule in src/lib/agent/training/bake-schedule.ts",
-      },
-      phases: [
-        { phase: 0, name: "Safety locks", week: "Day 0" },
-        { phase: 1, name: "Core product bake", week: "Week 1" },
-        { phase: 2, name: "Heavy routing brain", week: "Week 2" },
-        { phase: 3, name: "Multimodal memory", week: "Week 2-3" },
-        { phase: 4, name: "Hosting topology", week: "Week 3" },
-        { phase: 5, name: "Frontier optional", week: "Week 4-5" },
-        { phase: 6, name: "Recurring keep-hot", week: "Ongoing" },
-      ],
-      recurring: [
-        { id: "RC-D1", cadence: "daily", title: "Health LB+BE+FE", minutes: 10 },
-        { id: "RC-D2", cadence: "daily", title: "Routing smoke", minutes: 15 },
-        { id: "RC-W1", cadence: "weekly", title: "Memory distill audit", minutes: 30 },
-        { id: "RC-W2", cadence: "weekly", title: "Legal regression", minutes: 20 },
-        { id: "RC-W3", cadence: "weekly", title: "Presence sample", minutes: 20 },
-        { id: "RC-M1", cadence: "monthly", title: "Eval pack", minutes: 90 },
-        { id: "RC-M2", cadence: "monthly", title: "Security patch", minutes: 60 },
-        { id: "RC-M3", cadence: "monthly", title: "GPU cost review", minutes: 30 },
-      ],
+      engine: ENGINE_VERSION,
+      phases: ["safety", "core", "routing", "multimodal", "hosting", "verify", "recurring"],
     });
   }
 
   if (url.pathname === "/api/topology") {
     return json(res, 200, {
-      design: "converged-r6",
-      backends: 2,
+      design: "g2p-dual-v2.1+verify",
+      backends: ["be-1 draft", "be-2 refine", "be-v verify"],
       frontends: 2,
       lb: "8080",
-      builds: ["A_bayes", "B_fixedpoint", "C_sparse_graph", "META"],
       host: HOST_ID,
-      note: "Dual-engine sequential draft→critic→edit + 2FE RR",
+      role: ENGINE_ROLE,
       engine: ENGINE_VERSION,
     });
   }
@@ -579,5 +600,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`[${HOST_ID}] backend on 0.0.0.0:${PORT}`);
+  console.log(`[${HOST_ID}] backend on 0.0.0.0:${PORT} role=${ENGINE_ROLE}`);
 });
