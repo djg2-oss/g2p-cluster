@@ -1,42 +1,56 @@
-# Best hosting arrangement
-
-## Topology (converged)
+# Agent G2P — 2 FE + 2 BE + LB
 
 ```
-                    ┌─ fe-1 :5173 ─┐
-Client ──► lb:8080 ─┤              ├── static UI
-                    └─ fe-2 :5174 ─┘
-                    ┌─ be-1 :3001 ─┐
-           /api/* ──┤              ├── META route + optional model API
-                    └─ be-2 :3002 ─┘
+        ┌─────────────┐
+        │  LB :8080   │
+        └──────┬──────┘
+     ┌─────────┴─────────┐
+     │                   │
+ /api/*               UI /*
+     │                   │
+┌────┴────┐         ┌────┴────┐
+│ BE-1    │         │ FE-1    │
+│ :3001   │         │ :5173   │
+└────┬────┘         └────┬────┘
+┌────┴────┐         ┌────┴────┐
+│ BE-2    │         │ FE-2    │
+│ :3002   │         │ :5174   │  ← backup FE
+└─────────┘         └─────────┘
 ```
 
-## Local (this sandbox / VPS)
+## Start (local / VPS)
 
 ```bash
 sh deploy/start-cluster.sh
-# or
+# open http://HOST:8080
+```
+
+## Docker
+
+```bash
 docker compose up -d
 ```
 
-## Env (optional frontier)
+## Roles
 
-```bash
-# never put master keys in the browser
-MODEL_API_URL=
-MODEL_API_KEY=
-RUNPOD_API_KEY=
-RUNPOD_VIDEO_ENDPOINT_ID=
-RUNPOD_MUSIC_ENDPOINT_ID=
-```
+| Node | Port | Role |
+|------|------|------|
+| **lb** | 8080 | Edge — round-robin API + UI |
+| **be-1** | 3001 | Backend primary |
+| **be-2** | 3002 | Backend secondary |
+| **fe-1** | 5173 | Frontend primary |
+| **fe-2** | 5174 | Frontend backup |
 
-## Health / recurring
+## Health
 
-```bash
-node scripts/healthcheck.mjs      # daily
-node scripts/routing-smoke.mjs    # daily
-```
+- `GET /lb/health` — load balancer
+- `GET /api/health` — backends (RR)
+- `GET /fe/health` on each FE
 
-## Zip deploy
+## Video GPU
 
-See `G2P_CLUSTER_DEPLOY.zip` — extract on host, run compose or start-cluster.
+Not in this compose — RunPod WAN is external. See `VIDEO_RUNPOD.md`.
+
+## Vercel
+
+Vercel = single app deploy. Full 2×2 cluster needs VPS/Docker.
