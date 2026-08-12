@@ -26,9 +26,13 @@ import {
   type TopicKind,
 } from "./topic-memory";
 import { processThreeWindow } from "./three-window";
+import { isVideoGenerateIntent, videoIntentReply } from "./runpod-video";
 import { ingestDistill, EMPTY_MM_DISTILL } from "./multimodal-distill";
 import { visionToUserNote, type VisionFeatures } from "./live-vision";
 import { ingestTiered, defragTiers, EMPTY_TIERS } from "./memory-tiers";
+
+/** When set (e.g. http://127.0.0.1:8080), chat uses dual-engine /api/pipeline */
+const CLUSTER_API = (import.meta.env.VITE_CLUSTER_API as string | undefined)?.replace(/\/$/, "") || "";
 
 type ProgressMap = Record<string, TrainStatus>;
 
@@ -171,7 +175,7 @@ export const useAgentStore = create<AgentState>()(
         const userMsg = makeUserMessage(trimmed, mode);
         set({ messages: [...get().messages, userMsg], thinking: true });
 
-        window.setTimeout(() => {
+        window.setTimeout(async () => {
           const detectedKind = detectTopicKind(trimmed);
           const preferredMode = modeLocked ? mode : kindToMode(detectedKind);
 
@@ -198,13 +202,55 @@ export const useAgentStore = create<AgentState>()(
             mmDistill: mm,
             tiers,
           };
-          const { content, mode: used, confidence, topicKind } = generateAgentReply(
+          let { content, mode: used, confidence, topicKind } = generateAgentReply(
             trimmed,
             preferredMode,
             identity,
             memoryWithTw,
             lastTopicKind,
           );
+          // Phase B: dual-engine cluster quality path (draft→refine[+verify])
+          if (CLUSTER_API && typeof window !== "undefined" && !isVideoGenerateIntent(trimmed)) {
+            try {
+              const r = await fetch(`${CLUSTER_API}/api/pipeline?verify=1`, {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ text: trimmed }),
+              });
+              if (r.ok) {
+                const j = (await r.json()) as {
+                  content?: string;
+                  confidence?: "high" | "medium" | "low";
+                  winner?: string;
+                  quality?: number;
+                };
+                if (j.content) {
+                  content = [
+                    j.content,
+                    "",
+                    j.quality != null ? `_Dual-engine quality: **${j.quality}** · path **${j.winner || "—"}**_` : "",
+                  ]
+                    .filter(Boolean)
+                    .join("\n");
+                  if (j.confidence) confidence = j.confidence;
+                }
+              }
+            } catch {
+              /* keep local agent reply */
+            }
+          }
+          if (isVideoGenerateIntent(trimmed) && typeof window !== "undefined") {
+            try {
+              const { generateVideoFn } = await import("./runpod-video.server");
+              const result = (await generateVideoFn({
+                data: { prompt: trimmed, waitMs: 0 },
+              })) as import("./runpod-video").RunPodVideoResult;
+              content = videoIntentReply(result, trimmed);
+              confidence = result.ok ? "high" : "medium";
+            } catch {
+              // keep chat-engine content (env / server path message)
+            }
+          }
           const agentMsg = makeAgentMessage(content, used, confidence);
           const nextMem = rememberTurn(memoryWithTw, trimmed, content, topicKind);
           set({

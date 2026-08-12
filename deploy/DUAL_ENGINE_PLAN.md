@@ -103,15 +103,15 @@ Pass threshold: **≥ 0.72**
 - [x] 2 FE + 2 BE + LB
 
 ### Phase B — Next
-- [ ] Role pin: `ENGINE_ROLE=draft|refine` sticky hosts
-- [ ] Pipeline result cache (hash text → quality payload TTL)
-- [ ] Wire Agent G2P UI chat to edge `/api/pipeline` when cluster mode
-- [ ] Video: Director draft on BE-D → param refine on BE-R → RunPod
+- [x] Role pin: `ENGINE_ROLE=draft|refine` sticky hosts
+- [x] Pipeline result cache (hash text → quality payload TTL)
+- [x] Wire Agent G2P UI chat to edge `/api/pipeline` when cluster mode
+- [x] Video: Director plan dual-path `/api/video-plan` on BE-D → param refine on BE-R → RunPod
 
 ### Phase C — Scale
-- [ ] Optional 3rd engine verify-only
-- [ ] Metrics dashboard (p50/p95 pipeline ms, quality hist)
-- [ ] VPS docker-compose multi-node (not Vercel)
+- [x] Optional 3rd engine verify-only
+- [x] Metrics dashboard (`/metrics.html`) (p50/p95 pipeline ms, quality hist)
+- [x] VPS docker-compose multi-node (be1/be2/bev/fe1/fe2/lb) (not Vercel)
 
 ---
 

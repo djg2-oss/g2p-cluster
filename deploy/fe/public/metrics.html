@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>G2P Dual-Engine Metrics</title>
+  <style>
+    :root { --bg:#0c0f14; --panel:#141a22; --line:#243041; --fg:#e8eef7; --muted:#8b9bb0; --ok:#6ee7b7; --hi:#7dd3fc; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, sans-serif; background:var(--bg); color:var(--fg); min-height:100dvh; }
+    header { padding:1rem 1.25rem; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.75rem; }
+    h1 { font-size:1rem; margin:0; }
+    main { max-width:960px; margin:0 auto; padding:1.25rem; display:grid; gap:1rem; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:.75rem; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:1rem; }
+    .label { font-size:.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+    .val { font-size:1.4rem; font-weight:700; color:var(--ok); margin-top:.25rem; }
+    pre { font-size:.72rem; color:#c5d4e8; white-space:pre-wrap; word-break:break-word; margin:0; max-height:320px; overflow:auto; }
+    a { color:var(--hi); }
+    button { background:linear-gradient(135deg,var(--ok),var(--hi)); border:0; border-radius:999px; padding:.5rem 1rem; font-weight:700; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>G2P Dual-Engine Metrics · p50/p95 · quality</h1>
+    <div>
+      <button type="button" id="refresh">Refresh</button>
+      <a href="/">UI</a>
+    </div>
+  </header>
+  <main>
+    <div class="grid" id="cards"></div>
+    <div class="card"><div class="label">BE-1 raw</div><pre id="be1">…</pre></div>
+    <div class="card"><div class="label">BE-2 raw</div><pre id="be2">…</pre></div>
+    <div class="card"><div class="label">BE-V raw (if up)</div><pre id="bev">…</pre></div>
+  </main>
+  <script>
+    async function j(url) {
+      try {
+        const r = await fetch(url);
+        if (!r.ok) return { error: r.status };
+        return await r.json();
+      } catch (e) {
+        return { error: String(e) };
+      }
+    }
+    function card(label, val) {
+      return `<div class="card"><div class="label">${label}</div><div class="val">${val ?? "—"}</div></div>`;
+    }
+    async function load() {
+      const [a, b, v, lb] = await Promise.all([
+        j("/api/metrics"),
+        j("http://127.0.0.1:3002/api/metrics").catch(() => ({})),
+        j("http://127.0.0.1:3003/api/metrics").catch(() => ({})),
+        j("/lb/health"),
+      ]);
+      // Prefer edge metrics (hits a BE via RR)
+      const m = a.pipeline ? a : b;
+      const p = m.pipeline || {};
+      document.getElementById("cards").innerHTML = [
+        card("Host", m.host),
+        card("Role", m.role),
+        card("Pipelines", m.pipelines),
+        card("Verifies", m.verifies),
+        card("p50 ms", p.p50Ms),
+        card("p95 ms", p.p95Ms),
+        card("Quality mean", p.qualityMean),
+        card("Pipe cache hits", m.pipelineCacheHits),
+      ].join("");
+      document.getElementById("be1").textContent = JSON.stringify(a, null, 2);
+      // direct ports only work when page served same host with ports open — also try relative fail soft
+      document.getElementById("be2").textContent = JSON.stringify(b, null, 2);
+      document.getElementById("bev").textContent = JSON.stringify(v, null, 2);
+    }
+    document.getElementById("refresh").onclick = load;
+    load();
+    setInterval(load, 8000);
+  </script>
+</body>
+</html>

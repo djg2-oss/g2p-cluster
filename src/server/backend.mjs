@@ -10,10 +10,15 @@ import {
   runSequentialPipeline,
   ENGINE_VERSION,
 } from "../../deploy/engines/dual-engine.mjs";
+import { buildVerify, VERIFY_VERSION } from "../../deploy/engines/verify-engine.mjs";
 
 const PORT = Number(process.env.PORT || 3001);
 const HOST_ID = process.env.HOST_ID || `be-${PORT}`;
 const PEER = process.env.PEER_URL || "";
+/** draft | refine | verify | auto */
+const ENGINE_ROLE = (process.env.ENGINE_ROLE || "auto").toLowerCase();
+const VERIFY_URL = process.env.VERIFY_URL || ""; // optional Engine-V
+const PIPELINE_CACHE_TTL_MS = Number(process.env.PIPELINE_CACHE_TTL_MS || 120_000);
 
 // PERF: LRU route cache (identical short prompts)
 const routeCache = new Map();
@@ -46,14 +51,48 @@ const metrics = {
   routes: 0,
   refines: 0,
   pipelines: 0,
+  verifies: 0,
   cacheHits: 0,
+  pipelineCacheHits: 0,
   fastPaths: 0,
   fullMeta: 0,
   chat: 0,
   totalRouteMs: 0,
   maxRouteMs: 0,
+  pipelineMs: [], // ring for p50/p95
+  qualities: [],
   startedAt: Date.now(),
 };
+
+const pipelineCache = new Map();
+const PIPELINE_CACHE_MAX = 64;
+function pipelineCacheGet(key) {
+  const v = pipelineCache.get(key);
+  if (!v) return null;
+  if (Date.now() - v.at > PIPELINE_CACHE_TTL_MS) {
+    pipelineCache.delete(key);
+    return null;
+  }
+  metrics.pipelineCacheHits++;
+  return v.data;
+}
+function pipelineCacheSet(key, data) {
+  if (pipelineCache.size >= PIPELINE_CACHE_MAX) {
+    const first = pipelineCache.keys().next().value;
+    pipelineCache.delete(first);
+  }
+  pipelineCache.set(key, { at: Date.now(), data });
+}
+function pushSample(arr, n, max = 200) {
+  arr.push(n);
+  if (arr.length > max) arr.shift();
+}
+function percentile(arr, p) {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const i = Math.min(s.length - 1, Math.max(0, Math.ceil((p / 100) * s.length) - 1));
+  return s[i];
+}
 
 function extractSignals(text) {
   const t = text || "";
@@ -275,21 +314,70 @@ async function peerRefine(text, draftPayload) {
   }
 }
 
-async function qualityPipeline(text) {
+async function qualityPipeline(text, opts = {}) {
   metrics.pipelines++;
   const t0 = performance.now();
+  const cacheKey = createHash("sha1").update(String(text).trim().toLowerCase()).digest("hex");
+  if (!opts.noCache) {
+    const hit = pipelineCacheGet(cacheKey);
+    if (hit) {
+      return { ...hit, cached: true, ms: +(performance.now() - t0).toFixed(3) };
+    }
+  }
+
+  // Role pin: if this host is refine-only, bounce draft preference note
   const route = metaRoute(text);
   const out = await runSequentialPipeline({
     host: HOST_ID,
     text,
     route,
-    peerRefine: (txt, draft) => {
+    peerRefine: async (txt, draft) => {
       metrics.refines++;
+      // Prefer peer when we are draft-primary; if we are refine role and no peer, local
+      if (ENGINE_ROLE === "refine" && !PEER) return refineAnswer(txt, draft);
       return peerRefine(txt, draft);
     },
   });
+
+  // Optional Engine-V (third hop)
+  if (VERIFY_URL || ENGINE_ROLE === "verify" || opts.verify) {
+    metrics.verifies++;
+    try {
+      if (VERIFY_URL) {
+        const r = await fetch(`${VERIFY_URL}/api/verify`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ text, refined: out }),
+          signal: AbortSignal.timeout(8000),
+        });
+        if (r.ok) {
+          const v = await r.json();
+          out.content = v.content || out.content;
+          out.quality = v.quality ?? out.quality;
+          out.verifyHost = v.host;
+          out.verified = true;
+          out.flags = v.flags;
+        }
+      } else {
+        const v = buildVerify({ host: HOST_ID, text, refined: out });
+        out.content = v.content;
+        out.quality = v.quality;
+        out.verifyHost = HOST_ID;
+        out.verified = true;
+        out.flags = v.flags;
+      }
+    } catch (e) {
+      out.verifyError = String(e);
+    }
+  }
+
   out.ms = +(performance.now() - t0).toFixed(3);
   out.engine = out.engine || ENGINE_VERSION;
+  out.role = ENGINE_ROLE;
+  out.draftRole = ENGINE_ROLE === "refine" ? "peer-or-self" : HOST_ID;
+  pushSample(metrics.pipelineMs, out.ms);
+  if (typeof out.quality === "number") pushSample(metrics.qualities, out.quality);
+  if (!opts.noCache && out.ok !== false) pipelineCacheSet(cacheKey, out);
   return out;
 }
 
@@ -319,14 +407,22 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === "/api/metrics") {
     const avg = metrics.routes ? metrics.totalRouteMs / metrics.routes : 0;
+    const pms = metrics.pipelineMs || [];
+    const qs = metrics.qualities || [];
     return json(res, 200, {
       host: HOST_ID,
+      role: ENGINE_ROLE,
+      engine: ENGINE_VERSION,
+      verify: VERIFY_VERSION,
       uptimeSec: Math.round((Date.now() - metrics.startedAt) / 1000),
       routes: metrics.routes,
       refines: metrics.refines || 0,
       pipelines: metrics.pipelines || 0,
+      verifies: metrics.verifies || 0,
       chat: metrics.chat,
       cacheHits: metrics.cacheHits,
+      pipelineCacheHits: metrics.pipelineCacheHits || 0,
+      pipelineCacheSize: pipelineCache.size,
       cacheSize: routeCache.size,
       fastPaths: metrics.fastPaths,
       fullMeta: metrics.fullMeta,
@@ -335,6 +431,16 @@ const server = http.createServer(async (req, res) => {
       cacheHitRate: metrics.routes
         ? +(metrics.cacheHits / Math.max(1, metrics.routes)).toFixed(3)
         : 0,
+      pipeline: {
+        count: pms.length,
+        p50Ms: +percentile(pms, 50).toFixed(3),
+        p95Ms: +percentile(pms, 95).toFixed(3),
+        maxMs: pms.length ? Math.max(...pms) : 0,
+        qualityMean: qs.length ? +(qs.reduce((a, b) => a + b, 0) / qs.length).toFixed(4) : null,
+        qualityP50: qs.length ? +percentile(qs, 50).toFixed(4) : null,
+      },
+      peer: PEER || null,
+      verifyUrl: VERIFY_URL || null,
     });
   }
 
@@ -344,8 +450,10 @@ const server = http.createServer(async (req, res) => {
       host: HOST_ID,
       port: PORT,
       role: "backend",
+      engineRole: ENGINE_ROLE,
       ts: Date.now(),
       cache: routeCache.size,
+      pipelineCache: pipelineCache.size,
     });
   }
 
