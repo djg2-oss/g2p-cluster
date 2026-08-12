@@ -54,3 +54,24 @@ Not in this compose — RunPod WAN is external. See `VIDEO_RUNPOD.md`.
 ## Vercel
 
 Vercel = single app deploy. Full 2×2 cluster needs VPS/Docker.
+
+## Dual-engine quality (sequential, not parallel)
+
+```
+BE-A  DRAFT  →  BE-B  REFINE  →  final answer
+```
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/pipeline` | Full draft→refine across peer |
+| `POST /api/refine` | Refine stage only |
+| `POST /api/route` | Fast single-host META route |
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/pipeline \
+  -H 'content-type: application/json' \
+  -d '{"text":"solve 2x^2+3x-5=0"}'
+```
+
+Parallel round-robin still used for `/api/health` and simple `/api/route`.
+Quality path deliberately **serial** for better output.

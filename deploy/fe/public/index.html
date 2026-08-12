@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Agent G2P · 2FE + 2BE Cluster</title>
+  <title>Agent G2P · 2BE draft→refine · 2FE</title>
   <style>
     :root {
       --bg: #0c0f14;
@@ -61,7 +61,7 @@
 </head>
 <body>
   <header>
-    <h1>GROK-CLASS EDGE · 2 FE + 2 BE</h1>
+    <h1 title="Sequential dual engines">GROK-CLASS EDGE · 2 FE + 2 BE</h1>
     <span class="badge" id="fe-id">fe</span>
   </header>
   <main>
@@ -115,7 +115,7 @@ Stop: no further topology angle without new model pretrain.</pre>
       if (!text) return;
       btn.disabled = true;
       try {
-        const r = await j("/api/chat", {
+        const r = await j("/api/pipeline", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text }),
