@@ -20,17 +20,28 @@ function Start-G2PNode($Title, $EnvMap, $ScriptRel) {
 
 # Free note: user can close minimized windows to stop
 
-Start-G2PNode "be-1 draft" @{
+# Pass through RunPod keys if set in this session
+$rp = @{}
+if ($env:RUNPOD_API_KEY) { $rp.RUNPOD_API_KEY = $env:RUNPOD_API_KEY }
+if ($env:RUNPOD_VIDEO_ENDPOINT_ID) { $rp.RUNPOD_VIDEO_ENDPOINT_ID = $env:RUNPOD_VIDEO_ENDPOINT_ID }
+if ($env:RUNPOD_VIDEO_MODE) { $rp.RUNPOD_VIDEO_MODE = $env:RUNPOD_VIDEO_MODE }
+if ($env:RUNPOD_LORA_JSON) { $rp.RUNPOD_LORA_JSON = $env:RUNPOD_LORA_JSON }
+
+function Merge-Env([hashtable]$a, [hashtable]$b) {
+  $o = @{}; foreach ($k in $a.Keys) { $o[$k] = $a[$k] }; foreach ($k in $b.Keys) { $o[$k] = $b[$k] }; $o
+}
+
+Start-G2PNode "be-1 draft" (Merge-Env @{
   HOST_ID = "be-1"; PORT = "3001"; ENGINE_ROLE = "draft"
   PEER_URL = "http://127.0.0.1:3002"; VERIFY_URL = "http://127.0.0.1:3003"
   PIPELINE_CACHE_TTL_MS = "120000"
-} "src\server\backend.mjs"
+} $rp) "src\server\backend.mjs"
 
-Start-G2PNode "be-2 refine" @{
+Start-G2PNode "be-2 refine" (Merge-Env @{
   HOST_ID = "be-2"; PORT = "3002"; ENGINE_ROLE = "refine"
   PEER_URL = "http://127.0.0.1:3001"; VERIFY_URL = "http://127.0.0.1:3003"
   PIPELINE_CACHE_TTL_MS = "120000"
-} "src\server\backend.mjs"
+} $rp) "src\server\backend.mjs"
 
 Start-G2PNode "be-v verify" @{
   HOST_ID = "be-v"; PORT = "3003"; ENGINE_ROLE = "verify"

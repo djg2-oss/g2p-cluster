@@ -11,6 +11,12 @@ import {
   ENGINE_VERSION,
 } from "../../deploy/engines/dual-engine.mjs";
 import { buildVerify, VERIFY_VERSION } from "../../deploy/engines/verify-engine.mjs";
+import {
+  planVideo,
+  runVideoJob,
+  isVideoIntent,
+  DIRECTOR_VERSION,
+} from "../../deploy/engines/video-director.mjs";
 
 const PORT = Number(process.env.PORT || 3001);
 const HOST_ID = process.env.HOST_ID || `be-${PORT}`;
@@ -539,6 +545,35 @@ const server = http.createServer(async (req, res) => {
     const body = await readJsonBody(req);
     const text = String(body.text || body.prompt || "");
     if (!text.trim()) return json(res, 400, { error: "text required" });
+    // Auto video side-path when companion asks for generated video
+    if (body.autoVideo !== false && isVideoIntent(text)) {
+      const v = await runVideoJob(text, {
+        imageUrl: body.imageUrl || body.image_url,
+        draft: body.draft === true,
+      });
+      return json(res, 200, {
+        ok: v.ok !== false,
+        mode: "video-director-sidepath",
+        topology: "dual-be-pipeline+runpod",
+        winner: "media",
+        confidence: v.submitted ? "high" : "medium",
+        content: v.ok === false
+          ? `Video failed: ${v.error}`
+          : [
+              "**G2P Video Director**",
+              v.plan ? `Preset: ${v.plan.preset} | ${v.plan.draft ? "draft" : "final"}` : "",
+              v.plan ? `Directed: ${v.plan.directedPrompt.slice(0, 400)}` : "",
+              v.submitted
+                ? `Job: ${v.jobId} | status: ${v.status}`
+                : v.message || "Plan only (set RunPod env to submit).",
+              v.jobId ? `Poll: node scripts/runpod-video.mjs --status ${v.jobId}` : "",
+            ].filter(Boolean).join("\n"),
+        video: v,
+        quality: v.submitted ? 0.8 : 0.65,
+        ms: 0,
+        engine: DIRECTOR_VERSION,
+      });
+    }
     const verify =
       body.verify === true ||
       body.verify === "1" ||
@@ -554,26 +589,23 @@ const server = http.createServer(async (req, res) => {
     const body = await readJsonBody(req);
     const text = String(body.text || body.prompt || "");
     if (!text.trim()) return json(res, 400, { error: "text required" });
-    const draft = {
-      stage: "draft",
-      host: HOST_ID,
-      winner: "media",
-      confidence: "high",
-      content: [
-        `[DRAFT · ${HOST_ID}] Video Director`,
-        `User: ${text.slice(0, 400)}`,
-        "Expand preset/camera/light; peer refines params; RunPod submits GPU job.",
-      ].join("\n"),
-      route: metaRoute(text + " video cinematic"),
-    };
-    const refined = await peerRefine(text, draft);
-    return json(res, 200, {
-      ok: true,
-      mode: "video-director-dual",
-      draft,
-      refined,
-      note: "Plan only — GPU via RunPod / Agent G2P Director",
+    const plan = planVideo(text, {
+      hasImage: !!(body.imageUrl || body.image_url),
+      draft: body.draft === true,
     });
+    return json(res, 200, { host: HOST_ID, director: DIRECTOR_VERSION, ...plan });
+  }
+
+  if (url.pathname === "/api/video" && req.method === "POST") {
+    const body = await readJsonBody(req);
+    const text = String(body.text || body.prompt || "");
+    if (!text.trim()) return json(res, 400, { error: "text required" });
+    const out = await runVideoJob(text, {
+      hasImage: !!(body.imageUrl || body.image_url),
+      imageUrl: body.imageUrl || body.image_url,
+      draft: body.draft === true,
+    });
+    return json(res, out.ok === false ? 400 : 200, { host: HOST_ID, ...out });
   }
 
   if (url.pathname === "/api/bake") {

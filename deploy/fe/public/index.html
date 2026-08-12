@@ -3,140 +3,247 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Agent G2P · 2BE draft→refine · 2FE</title>
+  <title>Agent G2P · Dual-Engine</title>
   <style>
     :root {
-      --bg: #0c0f14;
-      --panel: #141a22;
+      --bg: #0b0e13;
+      --panel: #121821;
       --line: #243041;
       --fg: #e8eef7;
       --muted: #8b9bb0;
       --accent: #6ee7b7;
       --accent2: #7dd3fc;
+      --user: #1a2332;
+      --bot: #151c27;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "IBM Plex Sans", system-ui, sans-serif;
-      background: radial-gradient(1200px 600px at 10% -10%, #1a2838, var(--bg));
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(1000px 500px at 0% 0%, #152030, var(--bg));
       color: var(--fg);
       min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
     }
     header {
       border-bottom: 1px solid var(--line);
-      padding: 1rem 1.25rem;
-      display: flex; gap: 1rem; align-items: center; justify-content: space-between;
+      padding: 0.85rem 1.1rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: space-between;
       flex-wrap: wrap;
     }
-    h1 { font-size: 0.95rem; margin: 0; letter-spacing: 0.04em; }
+    h1 { font-size: 0.95rem; margin: 0; letter-spacing: 0.03em; }
     .badge {
-      font-size: 0.7rem; color: var(--muted);
-      border: 1px solid var(--line); padding: 0.25rem 0.5rem; border-radius: 999px;
+      font-size: 0.68rem; color: var(--muted);
+      border: 1px solid var(--line); padding: 0.2rem 0.5rem; border-radius: 999px;
     }
-    main { max-width: 720px; margin: 0 auto; padding: 1.25rem; }
-    .card {
-      background: var(--panel); border: 1px solid var(--line);
-      border-radius: 14px; padding: 1rem; margin-bottom: 1rem;
+    .ok { border-color: #2d6a4f; color: var(--accent); }
+    main {
+      flex: 1;
+      max-width: 820px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-height: 0;
     }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-    @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
-    label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 0.35rem; }
+    #thread {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      padding-bottom: 0.5rem;
+      min-height: 280px;
+    }
+    .msg {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 0.75rem 0.9rem;
+      max-width: 92%;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+    .msg.user { align-self: flex-end; background: var(--user); }
+    .msg.bot { align-self: flex-start; background: var(--bot); }
+    .msg .who { font-size: 0.65rem; color: var(--muted); margin-bottom: 0.35rem; }
+    .composer {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 16px;
+      padding: 0.75rem;
+    }
     textarea {
-      width: 100%; min-height: 100px; resize: vertical;
+      width: 100%; min-height: 72px; resize: vertical;
       background: #0a0e14; color: var(--fg); border: 1px solid var(--line);
-      border-radius: 10px; padding: 0.75rem; font: inherit;
+      border-radius: 10px; padding: 0.65rem; font: inherit;
+    }
+    .row {
+      display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
+      margin-top: 0.55rem;
     }
     button {
-      margin-top: 0.75rem;
       background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #062016; border: 0; border-radius: 999px; padding: 0.65rem 1.1rem;
-      font-weight: 700; cursor: pointer;
+      color: #062016; border: 0; border-radius: 999px; padding: 0.55rem 1rem;
+      font-weight: 700; cursor: pointer; font-size: 0.85rem;
+    }
+    button.ghost {
+      background: transparent; color: var(--muted); border: 1px solid var(--line);
+      font-weight: 600;
     }
     button:disabled { opacity: 0.5; cursor: wait; }
-    pre {
-      white-space: pre-wrap; word-break: break-word; font-size: 0.78rem;
-      color: #c5d4e8; margin: 0; line-height: 1.45;
+    label.chk {
+      display: flex; align-items: center; gap: 0.35rem;
+      font-size: 0.75rem; color: var(--muted);
     }
+    #status { font-size: 0.72rem; color: var(--muted); }
+    a { color: var(--accent2); }
   </style>
 </head>
 <body>
   <header>
-    <h1 title="Sequential dual engines">Agent G2P · Dual-Engine Edge</h1>
-    <span class="badge" id="fe-id">fe</span>
+    <div>
+      <h1>Agent G2P · Dual-Engine Chat</h1>
+      <div id="status">Connecting…</div>
+    </div>
+    <div class="row">
+      <span class="badge" id="health-badge">—</span>
+      <a class="badge" href="/metrics.html">Metrics</a>
+    </div>
   </header>
   <main>
-    <div class="card">
-      <div class="grid">
-        <div>
-          <label>Topology</label>
-          <pre id="topo">loading…</pre>
-        </div>
-        <div>
-          <label>Backend (via LB)</label>
-          <pre id="health">loading…</pre>
-        </div>
+    <div id="thread"></div>
+    <div class="composer">
+      <textarea id="q" placeholder="Ask anything — math, life, build… or: generate a video of ocean sunset"></textarea>
+      <div class="row">
+        <label class="chk"><input type="checkbox" id="verify" /> Verify engine</label>
+        <button type="button" id="send">Send</button>
+        <button type="button" class="ghost" id="clear">Clear chat</button>
       </div>
-    </div>
-    <div class="card">
-      <label>Ask dual engines (draft → refine)</label>
-      <textarea id="q" placeholder="solve 2x^2+3x-5=0 · career vs offer · build an api"></textarea>
-      <label style="display:flex;align-items:center;gap:.5rem;margin-top:.75rem;font-size:.8rem;color:var(--muted)">
-        <input type="checkbox" id="verify" /> Also run verify engine (BE-V)
-      </label>
-      <button type="button" id="go">Run dual-engine pipeline</button>
-      <div id="meta" class="badge" style="display:inline-block;margin-top:.75rem">—</div>
-      <pre id="out" style="margin-top:1rem"></pre>
-    </div>
-    <div class="card">
-      <label>Converged design</label>
-      <pre>LB:8080 → FE×2 + BE×2
-A Bayes · B Fixed-point · C Sparse graph · META
-Stop: no further topology angle without new model pretrain.</pre>
     </div>
   </main>
   <script>
-    document.getElementById("fe-id").textContent = "frontend :" + (location.port || "80");
+    const KEY = "g2p-edge-chat-v1";
+    const thread = document.getElementById("thread");
+    const q = document.getElementById("q");
+    let busy = false;
+
+    function load() {
+      try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
+    }
+    function save(msgs) {
+      localStorage.setItem(KEY, JSON.stringify(msgs.slice(-80)));
+    }
+    function render() {
+      const msgs = load();
+      thread.innerHTML = "";
+      if (!msgs.length) {
+        const d = document.createElement("div");
+        d.className = "msg bot";
+        d.innerHTML = '<div class="who">Agent G2P</div>Dual-engine ready: draft (BE-1) → refine (BE-2). Video uses Director + RunPod when keys are set. Ask a question.';
+        thread.appendChild(d);
+        return;
+      }
+      for (const m of msgs) {
+        const d = document.createElement("div");
+        d.className = "msg " + (m.role === "user" ? "user" : "bot");
+        d.innerHTML = '<div class="who">' + (m.role === "user" ? "You" : "Agent G2P") +
+          (m.meta ? " · " + m.meta : "") + "</div>" +
+          escapeHtml(m.content);
+        thread.appendChild(d);
+      }
+      thread.scrollTop = thread.scrollHeight;
+    }
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&")
+        .replace(/</g, "<")
+        .replace(/>/g, ">");
+    }
+
     async function j(url, opts) {
       const r = await fetch(url, opts);
       const t = await r.text();
       try { return JSON.parse(t); } catch { return { raw: t, status: r.status }; }
     }
-    async function refresh() {
+
+    async function refreshHealth() {
       try {
-        document.getElementById("topo").textContent = JSON.stringify(await j("/api/topology"), null, 2);
+        const h = await j("/api/health");
+        const b = document.getElementById("health-badge");
+        b.textContent = (h.host || "be") + " · " + (h.engineRole || "ok");
+        b.className = "badge ok";
+        document.getElementById("status").textContent =
+          "Dual-engine online · pipeline + video side-path";
       } catch (e) {
-        document.getElementById("topo").textContent = String(e);
-      }
-      try {
-        document.getElementById("health").textContent = JSON.stringify(await j("/api/health"), null, 2);
-      } catch (e) {
-        document.getElementById("health").textContent = String(e);
+        document.getElementById("health-badge").textContent = "offline";
+        document.getElementById("status").textContent = "Start cluster: deploy\\\\start-cluster.ps1";
       }
     }
-    document.getElementById("go").onclick = async () => {
-      const btn = document.getElementById("go");
-      const text = document.getElementById("q").value.trim();
-      if (!text) return;
-      btn.disabled = true;
-      document.getElementById("out").textContent = "Running draft -> refine...";
+
+    async function send() {
+      const text = q.value.trim();
+      if (!text || busy) return;
+      busy = true;
+      document.getElementById("send").disabled = true;
+      const msgs = load();
+      msgs.push({ role: "user", content: text });
+      save(msgs);
+      q.value = "";
+      render();
+
       try {
-        const verify = document.getElementById("verify")?.checked;
+        const verify = document.getElementById("verify").checked;
         const r = await j("/api/pipeline", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, verify: !!verify }),
+          body: JSON.stringify({ text, verify, autoVideo: true }),
         });
-        const meta = document.getElementById("meta");
-        if (meta) meta.textContent = (r.ok ? "OK" : "ERR") + " | " + (r.draftHost||"?") + " -> " + (r.refineHost||"?") + " | q=" + (r.quality ?? "—") + " | " + (r.ms||"?") + "ms" + (r.verified ? " | verified" : "");
-        document.getElementById("out").textContent = (r.content || JSON.stringify(r, null, 2));
+        const meta = [
+          r.mode || "",
+          r.draftHost && r.refineHost ? r.draftHost + "→" + r.refineHost : "",
+          r.quality != null ? "q=" + r.quality : "",
+          r.ms != null ? r.ms + "ms" : "",
+          r.verified ? "verified" : "",
+          r.video && r.video.jobId ? "job " + r.video.jobId : "",
+        ].filter(Boolean).join(" · ");
+        msgs.push({
+          role: "bot",
+          content: r.content || JSON.stringify(r, null, 2),
+          meta,
+        });
+        save(msgs);
       } catch (e) {
-        document.getElementById("out").textContent = String(e);
+        msgs.push({ role: "bot", content: "Error: " + e, meta: "error" });
+        save(msgs);
       }
-      btn.disabled = false;
-      refresh();
+      render();
+      busy = false;
+      document.getElementById("send").disabled = false;
+      q.focus();
+    }
+
+    document.getElementById("send").onclick = send;
+    document.getElementById("clear").onclick = () => {
+      localStorage.removeItem(KEY);
+      render();
     };
-    refresh();
-    setInterval(refresh, 8000);
+    q.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        send();
+      }
+    });
+    render();
+    refreshHealth();
+    setInterval(refreshHealth, 10000);
   </script>
 </body>
 </html>
