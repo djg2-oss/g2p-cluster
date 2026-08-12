@@ -8,7 +8,7 @@
  *   + measurable quality score + stop conditions
  *
  * Pipeline:
- *   ANALYZE → SPECIALIST DRAFT → CRITIC → EDITOR (refine) → VERIFY → FINAL
+ *   ANALYZE -> SPECIALIST DRAFT -> CRITIC -> EDITOR (refine) -> VERIFY -> FINAL
  *   Engines: Engine-D (draft) then Engine-R (refine) — series, different roles.
  */
 
@@ -111,10 +111,10 @@ export function trySolveMath(text) {
           kind: "quadratic",
           steps: [
             `Identify a=${a}, b=${b}, c=${c}`,
-            `Discriminant Δ=b²-4ac=${disc}`,
-            `x = (-b±√Δ)/(2a)`,
-            `x₁=${fmt(x1)}, x₂=${fmt(x2)}`,
-            `Check: plug each root back into ${a}x²+${b}x+${c}`,
+            `Discriminant D=b^2-4ac=${disc}`,
+            `x = (-b+/-sqrt(D))/(2a)`,
+            `x1=${fmt(x1)}, x2=${fmt(x2)}`,
+            `Check: plug each root back into ${a}x^2+${b}x+${c}`,
           ],
           answer: `x = ${fmt(x1)} or x = ${fmt(x2)}`,
           answerHint: fmt(x1),
@@ -122,7 +122,7 @@ export function trySolveMath(text) {
       }
       return {
         kind: "quadratic-complex",
-        steps: [`Δ=${disc} < 0 → complex roots`],
+        steps: [`D=${disc} < 0 -> complex roots`],
         answer: "complex roots",
         answerHint: "complex",
       };
@@ -165,7 +165,7 @@ export function buildDraft({ host, text, route }) {
   const conf = route.confidence || "medium";
   const solved = w === "math" ? trySolveMath(text) : null;
   const lines = [
-    `[DRAFT · ${host}] specialist=${w} conf=${conf}`,
+    `[DRAFT | ${host}] specialist=${w} conf=${conf}`,
     `META: A=${route.builds?.A?.winner} B=${route.builds?.B?.winner} C=${route.builds?.C?.winner}`,
     "",
   ];
@@ -185,32 +185,32 @@ export function buildDraft({ host, text, route }) {
   } else if (w === "life") {
     lines.push(
       "**Decision draft**",
-      "· Frame the real choice in one sentence",
-      "· Constraints (time, money, energy, people)",
-      "· Option A / B / C with tradeoffs",
-      "· Recommend one",
-      "· **Next action (24h):** …",
+      "- Frame the real choice in one sentence",
+      "- Constraints (time, money, energy, people)",
+      "- Option A / B / C with tradeoffs",
+      "- Recommend one",
+      "- **Next action (24h):** ...",
       "",
       `Context: ${text.slice(0, 320)}`,
     );
   } else if (w === "build") {
     lines.push(
       "**Build draft**",
-      "· Goal (user-visible)",
-      "· Stack / constraints",
-      "· Smallest shippable slice",
-      "· Files to touch",
-      "· Test / verify",
+      "- Goal (user-visible)",
+      "- Stack / constraints",
+      "- Smallest shippable slice",
+      "- Files to touch",
+      "- Test / verify",
       "",
       `Request: ${text.slice(0, 320)}`,
     );
   } else if (w === "phenome" || w === "media") {
     lines.push(
       "**Media / Director draft**",
-      "· Intent: generate vs analyze",
-      "· Preset (cinematic/handheld/product/character)",
-      "· Camera + light language",
-      "· RunPod WAN params / LoRA if any",
+      "- Intent: generate vs analyze",
+      "- Preset (cinematic/handheld/product/character)",
+      "- Camera + light language",
+      "- RunPod WAN params / LoRA if any",
       "",
       `Ask: ${text.slice(0, 280)}`,
     );
@@ -267,7 +267,7 @@ export function buildRefine({ host, text, draftPayload }) {
     if (h.includes("next action")) patches.push("**Next action (24h):** write the single smallest step and do it today.");
     if (h.includes("slice")) patches.push("**First slice:** one file + one test path, ship before polish.");
     if (h.includes("directed shot")) patches.push("**Shot:** cinematic, motivated light, one clear camera move.");
-    if (h.includes("thin")) patches.push("Expand with structure: context → answer → next step.");
+    if (h.includes("thin")) patches.push("Expand with structure: context -> answer -> next step.");
   }
 
   // Confidence boost rules
@@ -276,19 +276,19 @@ export function buildRefine({ host, text, draftPayload }) {
   else if (crit.quality >= 0.65) confOut = conf === "low" ? "medium" : conf;
   else confOut = "low";
 
-  const body = draft.replace(/^\[DRAFT[^\]]*\]/m, `[FINAL · ${host}]`).trim();
+  const body = draft.replace(/^\[DRAFT[^\]]*\]/m, `[FINAL | ${host}]`).trim();
   const content = [
-    `[REFINE · ${host}] ← draft from ${draftPayload?.host || "self"}`,
-    `Path: ${w} · conf ${confOut} · quality ${crit.quality}`,
+    `[REFINE | ${host}] <- draft from ${draftPayload?.host || "self"}`,
+    `Path: ${w} | conf ${confOut} | quality ${crit.quality}`,
     crit.holes.length ? `Critic holes: ${crit.holes.join("; ")}` : "Critic: no major holes",
     "",
-    "— Refined output —",
+    "--- Refined output ---",
     body,
     patches.length ? "" : null,
     ...patches,
     "",
-    `Rubric: correct ${crit.scores.correctness} · complete ${crit.scores.completeness} · clear ${crit.scores.clarity} · action ${crit.scores.actionability} · safety ${crit.scores.safety}`,
-    "Mode: sequential dual-engine (draft→critic→edit) — not parallel race.",
+    `Rubric: correct ${crit.scores.correctness} | complete ${crit.scores.completeness} | clear ${crit.scores.clarity} | action ${crit.scores.actionability} | safety ${crit.scores.safety}`,
+    "Mode: sequential dual-engine (draft->critic->edit) - not parallel race.",
   ]
     .filter((x) => x !== null)
     .join("\n");
@@ -375,6 +375,6 @@ export async function runSequentialPipeline({
     fallback: final.fallback,
     doublePass: final.doublePass || false,
     engine: ENGINE_VERSION,
-    note: "Series: Engine-D draft → Engine-R critic/edit (quality > parallel speed).",
+    note: "Series: Engine-D draft -> Engine-R critic/edit (quality > parallel speed).",
   };
 }

@@ -61,7 +61,7 @@
 </head>
 <body>
   <header>
-    <h1 title="Sequential dual engines">GROK-CLASS EDGE · 2 FE + 2 BE</h1>
+    <h1 title="Sequential dual engines">Agent G2P · Dual-Engine Edge</h1>
     <span class="badge" id="fe-id">fe</span>
   </header>
   <main>
@@ -78,9 +78,13 @@
       </div>
     </div>
     <div class="card">
-      <label>Message → META on backends</label>
+      <label>Ask dual engines (draft → refine)</label>
       <textarea id="q" placeholder="solve 2x^2+3x-5=0 · career vs offer · build an api"></textarea>
-      <button type="button" id="go">Run heavy route</button>
+      <label style="display:flex;align-items:center;gap:.5rem;margin-top:.75rem;font-size:.8rem;color:var(--muted)">
+        <input type="checkbox" id="verify" /> Also run verify engine (BE-V)
+      </label>
+      <button type="button" id="go">Run dual-engine pipeline</button>
+      <div id="meta" class="badge" style="display:inline-block;margin-top:.75rem">—</div>
       <pre id="out" style="margin-top:1rem"></pre>
     </div>
     <div class="card">
@@ -114,13 +118,17 @@ Stop: no further topology angle without new model pretrain.</pre>
       const text = document.getElementById("q").value.trim();
       if (!text) return;
       btn.disabled = true;
+      document.getElementById("out").textContent = "Running draft -> refine...";
       try {
+        const verify = document.getElementById("verify")?.checked;
         const r = await j("/api/pipeline", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text }),
+          body: JSON.stringify({ text, verify: !!verify }),
         });
-        document.getElementById("out").textContent = JSON.stringify(r, null, 2);
+        const meta = document.getElementById("meta");
+        if (meta) meta.textContent = (r.ok ? "OK" : "ERR") + " | " + (r.draftHost||"?") + " -> " + (r.refineHost||"?") + " | q=" + (r.quality ?? "—") + " | " + (r.ms||"?") + "ms" + (r.verified ? " | verified" : "");
+        document.getElementById("out").textContent = (r.content || JSON.stringify(r, null, 2));
       } catch (e) {
         document.getElementById("out").textContent = String(e);
       }
