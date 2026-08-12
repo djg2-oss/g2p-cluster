@@ -253,6 +253,7 @@
       <div class="row">
         <label class="chk"><input type="checkbox" id="verify" /> Verify engine</label>
         <button type="button" class="primary" id="send">Send</button>
+        <button type="button" class="primary" id="video" title="Always uses Director + RunPod">Video</button>
         <button type="button" class="ghost" id="clear">Clear</button>
       </div>
     </div>
@@ -360,6 +361,63 @@
     }
 
     document.getElementById("send").onclick = send;
+    document.getElementById("video").onclick = async () => {
+      const text = q.value.trim();
+      if (!text || busy) return;
+      busy = true;
+      document.getElementById("send").disabled = true;
+      document.getElementById("video").disabled = true;
+      const msgs = load();
+      msgs.push({ role: "user", content: "[VIDEO] " + text });
+      save(msgs);
+      q.value = "";
+      render();
+      const nl = "\n";
+      try {
+        const r = await j("/api/video", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        let content;
+        if (r.ok === false) {
+          content = "Video error: " + (r.error || r.reason || JSON.stringify(r));
+        } else if (r.submitted) {
+          content = [
+            "G2P Video Director — JOB SUBMITTED",
+            "Preset: " + (r.plan && r.plan.preset),
+            "Directed: " + (r.plan && r.plan.directedPrompt),
+            "Job: " + r.jobId,
+            "Status: " + r.status,
+            "Poll: node scripts\\runpod-video.mjs --status " + r.jobId,
+          ].join(nl);
+        } else {
+          content = [
+            "G2P Video Director — PLAN (no GPU submit yet)",
+            "Preset: " + (r.plan && r.plan.preset),
+            "Directed: " + (r.plan && r.plan.directedPrompt),
+            r.message || "Set RUNPOD_API_KEY + RUNPOD_VIDEO_ENDPOINT_ID then restart cluster.",
+            "",
+            "After keys: click Video again.",
+          ].join(nl);
+        }
+        msgs.push({
+          role: "bot",
+          content: content,
+          meta: r.submitted ? "video job" : "video plan",
+        });
+        save(msgs);
+      } catch (e) {
+        msgs.push({ role: "bot", content: "Video error: " + e, meta: "error" });
+        save(msgs);
+      }
+      render();
+      busy = false;
+      document.getElementById("send").disabled = false;
+      document.getElementById("video").disabled = false;
+    };
+
+    
     document.getElementById("clear").onclick = () => {
       localStorage.removeItem(KEY);
       render();

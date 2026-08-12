@@ -33,8 +33,9 @@ function detectPreset(text) {
   if (/\b(raw|exact prompt|no director)\b/.test(t)) return "raw";
   if (/\b(trailer|epic|blockbuster)\b/.test(t)) return "trailer";
   if (/\b(product|catalog|packshot)\b/.test(t)) return "product";
-  if (/\b(character|portrait|person|actor)\b/.test(t)) return "character";
+  if (/\b(character|portrait|person|actor|serana|figure)\b/.test(t)) return "character";
   if (/\b(handheld|documentary)\b/.test(t)) return "handheld";
+  if (/\b(orbit|circle|pan|dolly)\b/.test(t)) return "cinematic";
   return "cinematic";
 }
 
@@ -110,15 +111,19 @@ export function planVideo(userText, opts = {}) {
   const preset = opts.forcePreset || detectPreset(original);
   const draft = opts.draft ?? /\b(draft|quick|preview)\b/i.test(original);
   const cfg = PRESETS[preset] || PRESETS.cinematic;
-  const cam = /\bdolly\b/i.test(original)
-    ? "slow dolly-in"
-    : "smooth intentional camera motion";
+
+  let cam = "smooth intentional camera motion";
+  if (/\b(dolly|push in)\b/i.test(original)) cam = "slow dolly-in";
+  else if (/\b(orbit|circle|circl)\b/i.test(original)) cam = "orbiting camera circling subject";
+  else if (/\b(pan|pans)\b/i.test(original)) cam = "cinematic pan in and out";
+
   const light = /\b(sunset|sunrise|golden)\b/i.test(original)
     ? "golden-hour warm light"
     : "motivated cinematic lighting";
   const enriched =
     preset === "raw" ? core : `${core}. Camera: ${cam}. Light: ${light}.`;
   const directedPrompt = cfg.wrap(enriched);
+
   let lora;
   try {
     if (process.env.RUNPOD_LORA_JSON) lora = JSON.parse(process.env.RUNPOD_LORA_JSON);
@@ -132,8 +137,8 @@ export function planVideo(userText, opts = {}) {
     directedPrompt,
     negativePrompt: process.env.RUNPOD_NEGATIVE || cfg.negative,
     preset,
-    mode: opts.hasImage ? "i2v" : "t2v",
-    needsImage: !!opts.hasImage,
+    mode: opts.hasImage || opts.imageUrl ? "i2v" : "t2v",
+    needsImage: !!(opts.hasImage || opts.imageUrl),
     width: draft ? Math.min(cfg.width, 640) : cfg.width,
     height: draft ? Math.min(cfg.height, 640) : cfg.height,
     length: draft ? Math.min(cfg.length, 49) : cfg.length,
@@ -150,19 +155,45 @@ export function planVideo(userText, opts = {}) {
   };
 }
 
+/** True when user wants a generated video (not just media Q&A). */
 export function isVideoIntent(text) {
   const t = (text || "").trim();
   if (!t) return false;
-  if (/\b(how do you|memory|iconic|echoic|understand)\b/i.test(t) && !/\bgenerate\b/i.test(t)) {
+
+  if (
+    /\b(how do you|what is|explain|memory|iconic|echoic|understand)\b/i.test(t) &&
+    !/\b(generate|create|make|render|shoot|film|video|clip)\b/i.test(t)
+  ) {
     return false;
   }
-  return (
-    /\b(generate|create|make|render|produce|shoot|direct)\b.{0,40}\b(video|clip|footage|cinematic)\b/i.test(
-      t,
-    ) ||
-    /\b(video|clip)\b.{0,40}\b(generate|create|make|render|of|about)\b/i.test(t) ||
-    /\b(wan|runpod|director)\b.{0,30}\b(video|clip)\b/i.test(t)
+
+  if (
+    /\b(generate|create|make|render|produce|shoot|direct|film|animate)\b/i.test(t) &&
+    /\b(video|clip|footage|cinematic|scene|shot|animation|i2v|t2v)\b/i.test(t)
+  ) {
+    return true;
+  }
+
+  if (/\b(video|clip|footage)\b/i.test(t)) return true;
+
+  if (/\b(wan|runpod|text-to-video|image-to-video|i2v|t2v)\b/i.test(t)) return true;
+
+  const camera = /\b(camera|dolly|pans?|orbit|circles?|circl\w*|tracking|push in|pull back|zoom|crane|gimbal|handheld)\b/i.test(
+    t,
   );
+  const motion = /\b(walking|walks|walk by|running|turns|spinning|panning|showing off|posing)\b/i.test(
+    t,
+  );
+  const film = /\b(cinematic|footage|scene|shot|figure|character|serana|lora|body)\b/i.test(t);
+
+  if (camera && (motion || film)) return true;
+  if (
+    /\b(have|make|show)\b.+\b(walking|walk by|standing|posing)\b/i.test(t) &&
+    /\b(camera|pans?|circle|figure|body|cinematic)\b/i.test(t)
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function normalizeEndpoint(raw) {
@@ -194,7 +225,7 @@ export async function runVideoJob(userText, opts = {}) {
       submitted: false,
       plan,
       message:
-        "Director plan ready. Set RUNPOD_API_KEY + RUNPOD_VIDEO_ENDPOINT_ID on backends to submit GPU jobs.",
+        "Director plan ready. Set RUNPOD_API_KEY + RUNPOD_VIDEO_ENDPOINT_ID on backends, then restart cluster to submit GPU jobs.",
     };
   }
 
