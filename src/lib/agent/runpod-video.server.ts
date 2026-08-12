@@ -7,6 +7,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { extractVideoPrompt, type RunPodVideoResult } from "./runpod-video";
 import { loadRunPodSecrets } from "./runpod-secrets";
+import { planVideo, type DirectorPlan } from "./video-director";
 
 export type VideoGenOpts = {
   waitMs?: number;
@@ -131,8 +132,8 @@ async function pollStatus(
 
 export async function runPodVideoGenerate(
   prompt: string,
-  opts?: VideoGenOpts,
-): Promise<RunPodVideoResult> {
+  opts?: VideoGenOpts & { useDirector?: boolean },
+): Promise<RunPodVideoResult & { director?: DirectorPlan }> {
   const secrets = loadRunPodSecrets();
   const missing: string[] = [];
   if (!secrets.apiKey) missing.push("RUNPOD_API_KEY");
@@ -147,7 +148,31 @@ export async function runPodVideoGenerate(
     return { ok: false, error: "Invalid RUNPOD_VIDEO_ENDPOINT_ID" };
   }
   const base = `https://api.runpod.ai/v2/${endpointId}`;
-  const input = buildInput(prompt, opts);
+  const useDirector = opts?.useDirector !== false;
+  let director: DirectorPlan | undefined;
+  let effectivePrompt = prompt;
+  let mergedOpts: VideoGenOpts = { ...opts };
+  if (useDirector) {
+    const plan = planVideo(prompt, {
+      hasImage: !!(opts?.imageBase64 || opts?.imageUrl),
+    });
+    if (!plan.ok) {
+      return { ok: false, error: plan.reason };
+    }
+    director = plan;
+    effectivePrompt = plan.directedPrompt;
+    mergedOpts = {
+      ...mergedOpts,
+      negativePrompt: mergedOpts.negativePrompt || plan.negativePrompt,
+      width: mergedOpts.width ?? plan.width,
+      height: mergedOpts.height ?? plan.height,
+      length: mergedOpts.length ?? plan.length,
+      steps: mergedOpts.steps ?? plan.steps,
+      cfg: mergedOpts.cfg ?? plan.cfg,
+      loraPairs: mergedOpts.loraPairs ?? plan.loraPairs,
+    };
+  }
+  const input = buildInput(effectivePrompt, mergedOpts);
 
   try {
     const runRes = await fetch(`${base}/${runPath}`, {
@@ -216,5 +241,6 @@ export const generateVideoFn = createServerFn({ method: "POST" })
       imageBase64: data.imageBase64,
       imageUrl: data.imageUrl,
       negativePrompt: data.negativePrompt,
+      useDirector: true,
     });
   });

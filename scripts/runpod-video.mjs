@@ -90,7 +90,7 @@ const args = process.argv.slice(2);
 const wait = args.includes("--wait");
 const statusIdx = args.indexOf("--status");
 const statusId = statusIdx >= 0 ? args[statusIdx + 1] : null;
-const prompt = args.filter((a, i) => a !== "--wait" && a !== "--status" && i !== statusIdx + 1).join(" ").trim();
+const prompt = args.filter((a, i) => a !== "--wait" && a !== "--status" && a !== "--raw" && i !== statusIdx + 1).join(" ").trim();
 
 if (!apiKey || !endpointId) {
   console.error("Missing RUNPOD_API_KEY and/or RUNPOD_VIDEO_ENDPOINT_ID");
@@ -121,24 +121,46 @@ if (!prompt) {
   process.exit(1);
 }
 
+const noDirector = args.includes("--raw");
+function planDirected(userPrompt) {
+  const core = userPrompt.replace(/\b(please|generate|create|make|render|video|clip|of|a|an|the)\b/gi, " ").replace(/\s+/g, " ").trim() || userPrompt;
+  const preset = /\b(trailer|epic)\b/i.test(userPrompt) ? "trailer"
+    : /\b(product|catalog)\b/i.test(userPrompt) ? "product"
+    : /\b(handheld|documentary)\b/i.test(userPrompt) ? "handheld"
+    : /\b(character|portrait|person)\b/i.test(userPrompt) ? "character"
+    : /\b(raw|exact prompt)\b/i.test(userPrompt) ? "raw"
+    : "cinematic";
+  const draft = /\b(draft|quick|preview)\b/i.test(userPrompt);
+  const cam = /\bdolly\b/i.test(userPrompt) ? "slow dolly-in" : "smooth intentional camera motion";
+  const light = /\b(sunset|sunrise|golden)\b/i.test(userPrompt) ? "golden-hour warm light" : "motivated cinematic lighting";
+  const directedPrompt = preset === "raw" ? core
+    : `Cinematic anamorphic shot, shallow depth of field, film grain, ${core}. Camera: ${cam}. Light: ${light}. Coherent motion, high detail.`;
+  return {
+    prompt: directedPrompt,
+    negative_prompt: process.env.RUNPOD_NEGATIVE || "blurry, low quality, watermark, text overlay, worst quality, jpeg artifacts, morphing faces, flicker",
+    width: Number(process.env.RUNPOD_WIDTH || (preset === "product" ? 640 : 832)),
+    height: Number(process.env.RUNPOD_HEIGHT || (preset === "character" || preset === "handheld" ? 832 : 480)),
+    length: Number(process.env.RUNPOD_LENGTH || (draft ? 49 : 81)),
+    steps: Number(process.env.RUNPOD_STEPS || (draft ? 8 : 12)),
+    cfg: Number(process.env.RUNPOD_CFG || 2),
+    preset,
+    draft,
+  };
+}
 let lora;
 try {
   if (process.env.RUNPOD_LORA_JSON) lora = JSON.parse(process.env.RUNPOD_LORA_JSON);
-} catch {
-  /* ignore */
-}
-
+} catch { /* ignore */ }
+const directed = noDirector ? null : planDirected(prompt);
 const input = {
-  prompt,
-  positive_prompt: prompt,
-  negative_prompt:
-    process.env.RUNPOD_NEGATIVE ||
-    "blurry, low quality, watermark, text overlay, worst quality, jpeg artifacts",
-  width: Number(process.env.RUNPOD_WIDTH || 480),
-  height: Number(process.env.RUNPOD_HEIGHT || 832),
-  length: Number(process.env.RUNPOD_LENGTH || 81),
-  steps: Number(process.env.RUNPOD_STEPS || 10),
-  cfg: Number(process.env.RUNPOD_CFG || 2),
+  prompt: directed ? directed.prompt : prompt,
+  positive_prompt: directed ? directed.prompt : prompt,
+  negative_prompt: directed ? directed.negative_prompt : (process.env.RUNPOD_NEGATIVE || "blurry, low quality, watermark, text overlay, worst quality, jpeg artifacts"),
+  width: directed ? directed.width : Number(process.env.RUNPOD_WIDTH || 480),
+  height: directed ? directed.height : Number(process.env.RUNPOD_HEIGHT || 832),
+  length: directed ? directed.length : Number(process.env.RUNPOD_LENGTH || 81),
+  steps: directed ? directed.steps : Number(process.env.RUNPOD_STEPS || 10),
+  cfg: directed ? directed.cfg : Number(process.env.RUNPOD_CFG || 2),
 };
 if (lora) {
   input.lora_pairs = lora;
@@ -168,6 +190,7 @@ console.log(
       mode: runPath,
       video: inlineVideo || null,
       endpoint: endpointIdClean,
+      director: directed ? { preset: directed.preset, draft: directed.draft, prompt: directed.prompt.slice(0, 200) } : null,
     },
     null,
     2,

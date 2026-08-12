@@ -1,6 +1,6 @@
 /**
  * RunPod video — optional side path only.
- * Core agent intelligence does NOT use this.
+ * Core agent intelligence does NOT use this for math/life/build.
  * Env (server only): RUNPOD_API_KEY, RUNPOD_VIDEO_ENDPOINT_ID
  */
 
@@ -13,7 +13,6 @@ export const RUNPOD_VIDEO_ENV = {
 export function isVideoGenerateIntent(text: string): boolean {
   const t = text.trim();
   if (!t) return false;
-  // Exclude phenome / memory questions
   if (
     /\b(how do you|how does|memory|iconic|echoic|see video|process video|understand)\b/i.test(
       t,
@@ -22,11 +21,12 @@ export function isVideoGenerateIntent(text: string): boolean {
     return false;
   }
   return (
-    /\b(generate|create|make|render|produce|shoot)\b.{0,40}\b(video|clip|footage|animation|cinematic)\b/i.test(
+    /\b(generate|create|make|render|produce|shoot|direct)\b.{0,40}\b(video|clip|footage|animation|cinematic)\b/i.test(
       t,
     ) ||
     /\b(video|clip)\b.{0,40}\b(generate|create|make|render|of|showing|about)\b/i.test(t) ||
-    /\b(wan|runpod)\b.{0,30}\b(video|clip)\b/i.test(t)
+    /\b(wan|runpod|director)\b.{0,30}\b(video|clip)\b/i.test(t) ||
+    /\b(video director|direct a (video|shot|clip))\b/i.test(t)
   );
 }
 
@@ -34,7 +34,7 @@ export function isVideoGenerateIntent(text: string): boolean {
 export function extractVideoPrompt(text: string): string {
   const cleaned = text
     .replace(
-      /\b(please|can you|could you|generate|create|make|render|produce|a|an|the|video|clip|footage|of|showing|about)\b/gi,
+      /\b(please|can you|could you|generate|create|make|render|produce|a|an|the|video|clip|footage|of|showing|about|direct)\b/gi,
       " ",
     )
     .replace(/\s+/g, " ")
@@ -48,6 +48,13 @@ export type RunPodVideoResult =
       jobId: string;
       status: string;
       videoUrl?: string;
+      director?: {
+        preset: string;
+        mode: string;
+        directedPrompt: string;
+        draft: boolean;
+        notes: string[];
+      };
     }
   | {
       ok: false;
@@ -67,13 +74,27 @@ export function videoIntentReply(result: RunPodVideoResult, prompt: string): str
     }
     return `Video request failed: ${result.error}\nCore agent tasks are unaffected.`;
   }
+  const d = result.director;
   const lines = [
-    "**Video job submitted** (RunPod — side path only).",
-    `Prompt: ${prompt.slice(0, 200)}`,
-    `Job: ${result.jobId} · status: ${result.status}`,
+    "**G2P Video Director → RunPod**",
+    d
+      ? `Preset **${d.preset}** · mode **${d.mode}** · ${d.draft ? "draft" : "final"}`
+      : "Director plan applied on server.",
+    "",
+    d?.directedPrompt
+      ? `Directed: ${d.directedPrompt.slice(0, 280)}${d.directedPrompt.length > 280 ? "…" : ""}`
+      : `Source: ${prompt.slice(0, 200)}`,
+    "",
+    `Job: \`${result.jobId}\` · **${result.status}**`,
   ];
-  if (result.videoUrl) lines.push(`URL: ${result.videoUrl}`);
-  else lines.push("Poll status on RunPod dashboard or re-ask with job id when ready.");
-  lines.push("Coding, business, marketing, iconic/echoic memory — unaffected.");
+  if (result.videoUrl) lines.push(`Video: ${result.videoUrl}`);
+  else
+    lines.push(
+      `Still rendering — poll: node scripts/runpod-video.mjs --status ${result.jobId}`,
+    );
+  if (d?.notes?.length) {
+    lines.push("", ...d.notes.slice(0, 4).map((n) => `· ${n}`));
+  }
+  lines.push("", "Core genius stack (code/business/memory) untouched.");
   return lines.join("\n");
 }
