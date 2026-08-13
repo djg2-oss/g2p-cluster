@@ -88,7 +88,8 @@ export type RunPodSecrets = {
 /** Resolve RunPod credentials: env first, then secrets files. */
 export function loadRunPodSecrets(): RunPodSecrets {
   let apiKey = process.env.RUNPOD_API_KEY?.trim() || "";
-  let endpointId = process.env.RUNPOD_VIDEO_ENDPOINT_ID?.trim() || "";
+  let endpointId =
+    process.env.RUNPOD_VIDEO_ENDPOINT_ID?.trim() || "36t7uk060cachv";
   const fromEnvKey = !!apiKey;
   const fromEnvEp = !!endpointId;
   let dirUsed: string | undefined;

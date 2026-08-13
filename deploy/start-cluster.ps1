@@ -20,12 +20,20 @@ function Start-G2PNode($Title, $EnvMap, $ScriptRel) {
 
 # Free note: user can close minimized windows to stop
 
-# Pass through RunPod keys if set in this session
-$rp = @{}
+# Endpoint ID is public (your WAN worker) — baked in. API key is secret — env only.
+if (-not $env:RUNPOD_VIDEO_ENDPOINT_ID) { $env:RUNPOD_VIDEO_ENDPOINT_ID = "36t7uk060cachv" }
+if (-not $env:RUNPOD_VIDEO_MODE) { $env:RUNPOD_VIDEO_MODE = "run" }
+$rp = @{
+  RUNPOD_VIDEO_ENDPOINT_ID = $env:RUNPOD_VIDEO_ENDPOINT_ID
+  RUNPOD_VIDEO_MODE = $env:RUNPOD_VIDEO_MODE
+}
 if ($env:RUNPOD_API_KEY) { $rp.RUNPOD_API_KEY = $env:RUNPOD_API_KEY }
-if ($env:RUNPOD_VIDEO_ENDPOINT_ID) { $rp.RUNPOD_VIDEO_ENDPOINT_ID = $env:RUNPOD_VIDEO_ENDPOINT_ID }
-if ($env:RUNPOD_VIDEO_MODE) { $rp.RUNPOD_VIDEO_MODE = $env:RUNPOD_VIDEO_MODE }
 if ($env:RUNPOD_LORA_JSON) { $rp.RUNPOD_LORA_JSON = $env:RUNPOD_LORA_JSON }
+if ($env:RUNPOD_API_KEY) {
+  Write-Host "RunPod: endpoint 36t7uk060cachv + API key present"
+} else {
+  Write-Host "RunPod: endpoint baked in. Still need RUNPOD_API_KEY for GPU submit."
+}
 
 function Merge-Env([hashtable]$a, [hashtable]$b) {
   $o = @{}; foreach ($k in $a.Keys) { $o[$k] = $a[$k] }; foreach ($k in $b.Keys) { $o[$k] = $b[$k] }; $o

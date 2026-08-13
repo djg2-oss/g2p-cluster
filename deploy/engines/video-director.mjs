@@ -4,6 +4,10 @@
  */
 export const DIRECTOR_VERSION = "g2p-director-v1";
 
+/** Public endpoint — not a secret. Override with RUNPOD_VIDEO_ENDPOINT_ID if you change workers. */
+export const DEFAULT_VIDEO_ENDPOINT_ID = "36t7uk060cachv";
+export const DEFAULT_VIDEO_MODE = "run";
+
 export function directorLegalBlock(text) {
   const t = (text || "").toLowerCase();
   if (
@@ -203,10 +207,12 @@ function normalizeEndpoint(raw) {
   s = s.replace(/^https?:\/\/[^/]+\//i, "");
   s = s.replace(/\/(runsync|run|status)(\/.*)?$/i, "");
   s = s.replace(/^\/+|\/+$/g, "");
-  const mode = process.env.RUNPOD_VIDEO_MODE?.trim().toLowerCase();
+  const mode = (
+    process.env.RUNPOD_VIDEO_MODE?.trim() || DEFAULT_VIDEO_MODE
+  ).toLowerCase();
   if (mode === "runsync" || mode === "sync") path = "runsync";
   if (mode === "run" || mode === "async") path = "run";
-  return { id: s, path };
+  return { id: s || DEFAULT_VIDEO_ENDPOINT_ID, path };
 }
 
 /** Submit to RunPod if env configured; always returns director plan. */
@@ -218,14 +224,15 @@ export async function runVideoJob(userText, opts = {}) {
   const epRaw =
     process.env.RUNPOD_VIDEO_ENDPOINT_ID?.trim() ||
     process.env.RUNPOD_ENDPOINT_ID?.trim() ||
-    "";
-  if (!apiKey || !epRaw) {
+    DEFAULT_VIDEO_ENDPOINT_ID;
+  if (!apiKey) {
     return {
       ok: true,
       submitted: false,
       plan,
+      endpoint: DEFAULT_VIDEO_ENDPOINT_ID,
       message:
-        "Director plan ready. Set RUNPOD_API_KEY + RUNPOD_VIDEO_ENDPOINT_ID on backends, then restart cluster to submit GPU jobs.",
+        "Director plan ready. Endpoint is already in code (36t7uk060cachv). Only RUNPOD_API_KEY is missing — set that, restart cluster, then click Video.",
     };
   }
 

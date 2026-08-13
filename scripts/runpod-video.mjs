@@ -83,8 +83,12 @@ function extractVideoRef(data) {
   return undefined;
 }
 
+const DEFAULT_VIDEO_ENDPOINT_ID = "36t7uk060cachv";
 const apiKey = process.env.RUNPOD_API_KEY?.trim() || find(KEY_NAMES, true);
-const endpointId = process.env.RUNPOD_VIDEO_ENDPOINT_ID?.trim() || find(EP_NAMES, false);
+const endpointId =
+  process.env.RUNPOD_VIDEO_ENDPOINT_ID?.trim() ||
+  find(EP_NAMES, false) ||
+  DEFAULT_VIDEO_ENDPOINT_ID;
 
 const args = process.argv.slice(2);
 const wait = args.includes("--wait");
@@ -92,8 +96,8 @@ const statusIdx = args.indexOf("--status");
 const statusId = statusIdx >= 0 ? args[statusIdx + 1] : null;
 const prompt = args.filter((a, i) => a !== "--wait" && a !== "--status" && a !== "--raw" && i !== statusIdx + 1).join(" ").trim();
 
-if (!apiKey || !endpointId) {
-  console.error("Missing RUNPOD_API_KEY and/or RUNPOD_VIDEO_ENDPOINT_ID");
+if (!apiKey) {
+  console.error("Missing RUNPOD_API_KEY (endpoint is already built-in: 36t7uk060cachv)");
   process.exit(1);
 }
 
