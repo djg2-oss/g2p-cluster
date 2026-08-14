@@ -603,8 +603,9 @@ const server = http.createServer(async (req, res) => {
     const text = String(body.text || body.prompt || "");
     if (!text.trim()) return json(res, 400, { error: "text required" });
     const out = await runVideoJob(text, {
-      hasImage: !!(body.imageUrl || body.image_url),
+      hasImage: !!(body.imageUrl || body.image_url || body.imageBase64 || body.image_base64),
       imageUrl: body.imageUrl || body.image_url,
+      imageBase64: body.imageBase64 || body.image_base64,
       videoUrl: body.videoUrl || body.video_url,
       draft: body.draft === true,
       adult: body.adult === true,
@@ -615,6 +616,9 @@ const server = http.createServer(async (req, res) => {
       length: body.length,
       steps: body.steps,
       cfg: body.cfg,
+      durationSec: body.durationSec || body.duration,
+      negativePrompt: body.negativePrompt || body.negative,
+      seed: body.seed,
     });
     return json(res, out.ok === false ? 400 : 200, { host: HOST_ID, ...out });
   }

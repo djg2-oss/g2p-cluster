@@ -3,79 +3,57 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G2P Forge · Generate Studio</title>
+  <title>G2P Forge Studio</title>
   <style>
     :root {
-      --black: #050505;
-      --panel: #0e0e0e;
-      --ink: #f3efe4;
-      --muted: #8d8474;
-      --gold: #d4af37;
-      --gold2: #f0d78c;
-      --line: #3a3220;
-      --danger: #c45c4a;
+      --black: #050505; --panel: #0c0c0c; --ink: #f3efe4; --muted: #8d8474;
+      --gold: #d4af37; --gold2: #f0d78c; --line: #3a3220; --danger: #c45c4a;
     }
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100dvh;
-      background: #050505;
-      color: var(--ink);
-      font: 15px/1.45 "Segoe UI", system-ui, sans-serif;
-    }
+    body { margin: 0; min-height: 100dvh; background: #050505; color: var(--ink); font: 15px/1.45 "Segoe UI", system-ui, sans-serif; }
     .gold {
       background: linear-gradient(165deg, #fff8e0, #f0d78c, #d4af37, #a67c00, #f5e6a8);
       -webkit-background-clip: text; background-clip: text; color: transparent;
-      -webkit-text-stroke: 0.45px rgba(232,230,225,.45);
-      font-weight: 800; letter-spacing: .08em;
+      -webkit-text-stroke: 0.45px rgba(232,230,225,.4); font-weight: 800; letter-spacing: .08em;
     }
-    header {
-      display: flex; flex-wrap: wrap; gap: .75rem; align-items: center;
-      justify-content: space-between; padding: .85rem 1.1rem;
-      border-bottom: 1px solid var(--line); background: #000;
-    }
+    header { display: flex; flex-wrap: wrap; gap: .7rem; align-items: center; justify-content: space-between; padding: .8rem 1rem; border-bottom: 1px solid var(--line); background: #000; }
     nav { display: flex; flex-wrap: wrap; gap: .35rem; }
-    nav button, .ghost {
-      background: transparent; color: var(--muted); border: 1px solid var(--line);
-      border-radius: 999px; padding: .45rem .85rem; font-weight: 650; cursor: pointer;
-    }
+    nav button, .ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: .42rem .8rem; font-weight: 650; cursor: pointer; }
     nav button.on, .gold-btn {
       background: linear-gradient(165deg, #f5f2ea, #e8d5a3, #d4af37, #a0893a);
       color: #0a0800; border: 1px solid #f0e6c8; font-weight: 800; cursor: pointer;
     }
-    .gold-btn { border-radius: 999px; padding: .55rem 1.1rem; }
+    .gold-btn { border-radius: 999px; padding: .55rem 1.15rem; }
     .gold-btn:disabled { opacity: .5; cursor: wait; }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 1rem; display: grid; gap: 1rem; }
-    @media (min-width: 900px) {
-      .split { display: grid; grid-template-columns: 1.1fr .9fr; gap: 1rem; align-items: start; }
-    }
+    .wrap { max-width: 1140px; margin: 0 auto; padding: 1rem; display: grid; gap: 1rem; }
+    @media (min-width: 920px) { .split { display: grid; grid-template-columns: 1.12fr .88fr; gap: 1rem; align-items: start; } }
     .card {
-      background: var(--panel);
-      border: 1px solid transparent;
-      border-radius: 16px;
-      padding: 1rem;
-      background:
-        linear-gradient(#0e0e0e,#0e0e0e) padding-box,
-        linear-gradient(135deg,#f5f2ea,#d4af37,#8a7340,#e8e6e1) border-box;
+      background: linear-gradient(#0c0c0c,#0c0c0c) padding-box, linear-gradient(135deg,#f5f2ea,#d4af37,#8a7340,#e8e6e1) border-box;
+      border: 1px solid transparent; border-radius: 16px; padding: 1rem;
     }
-    label { display: block; font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: .55rem 0 .25rem; }
+    label { display: block; font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: .55rem 0 .25rem; }
     textarea, input[type=text], input[type=url], select, input[type=number] {
-      width: 100%; background: #000; color: var(--ink); border: 1px solid var(--line);
-      border-radius: 10px; padding: .65rem; font: inherit;
+      width: 100%; background: #000; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: .6rem; font: inherit;
     }
-    textarea { min-height: 110px; resize: vertical; }
-    .row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .7rem; }
+    textarea { min-height: 92px; resize: vertical; }
+    .row { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; margin-top: .65rem; }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
     .chk { display: flex; align-items: center; gap: .4rem; font-size: .8rem; color: var(--muted); text-transform: none; letter-spacing: 0; }
     #status { font-size: .75rem; color: var(--muted); }
-    #status.ok { color: var(--gold2); }
-    #status.bad { color: var(--danger); }
-    .job { font-size: .82rem; border-top: 1px solid var(--line); padding: .65rem 0; }
-    .job a { color: var(--gold2); }
-    video, img.preview { width: 100%; border-radius: 12px; background: #000; max-height: 420px; }
+    #status.ok { color: var(--gold2); } #status.bad { color: var(--danger); }
+    .modes { display: flex; flex-wrap: wrap; gap: .35rem; margin: .45rem 0; }
+    .modes button { font-size: .72rem; }
+    .chip { border-radius: 999px; border: 1px solid var(--line); background: #000; color: var(--muted); padding: .35rem .7rem; cursor: pointer; font-size: .75rem; }
+    .chip.on { border-color: var(--gold); color: #0a0800; background: linear-gradient(165deg,#f5f2ea,#d4af37); font-weight: 800; }
+    .job { font-size: .82rem; border-top: 1px solid var(--line); padding: .6rem 0; }
+    .job a, .job button.link { color: var(--gold2); background: none; border: 0; cursor: pointer; padding: 0; font: inherit; }
+    video, img.preview { width: 100%; border-radius: 12px; background: #000; max-height: 440px; }
     .hide { display: none; }
     .hint { font-size: .8rem; color: var(--muted); }
-    #log { white-space: pre-wrap; font-size: .8rem; color: #d8cba8; max-height: 220px; overflow: auto; }
+    #log { white-space: pre-wrap; font-size: .8rem; color: #d8cba8; max-height: 180px; overflow: auto; }
+    .bar { height: 6px; background: #1a160e; border-radius: 99px; overflow: hidden; margin-top: .4rem; }
+    .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#a0893a,#f0d78c,#d4af37); }
+    .thumb { width: 40px; height: 52px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
   </style>
 </head>
 <body>
@@ -87,27 +65,34 @@
     <nav>
       <button type="button" class="on" data-tab="gen">Generate</button>
       <button type="button" data-tab="player">Player</button>
-      <button type="button" data-tab="queue">Queue</button>
+      <button type="button" data-tab="lib">Library</button>
       <button type="button" data-tab="chat">Agent</button>
     </nav>
   </header>
   <div class="wrap">
     <section id="tab-gen" class="split">
       <div class="card">
-        <div class="gold" style="font-size:.85rem">MANUAL GENERATE</div>
-        <p class="hint">Text, image, or video in. Stills, clips, I2V, and extend. Adult 18+ only when you enable it. No minors. No xAI.</p>
-        <label>Mode</label>
-        <select id="kind">
-          <option value="t2v">Text → Video</option>
-          <option value="still">Text → Image / still</option>
-          <option value="i2v">Image → Video</option>
-          <option value="extend">Video extend</option>
-        </select>
+        <div class="gold" style="font-size:.82rem">STUDIO</div>
+        <p class="hint">G2P director + WAN 2.2 TI2V. Character only if you pick it. No xAI. Adult 18+ is your toggle. No minors.</p>
+        <div class="row" style="margin-top:.4rem">
+          <button type="button" class="chip" data-group="text">Text</button>
+          <button type="button" class="chip on" data-group="image">Image</button>
+          <button type="button" class="chip" data-group="video">Video</button>
+        </div>
+        <div class="modes" id="modes"></div>
+        <div class="row">
+          <button type="button" class="chip" id="cSerana">Serana</button>
+          <button type="button" class="chip" id="cDanny">Danny</button>
+          <span class="hint">optional — not forced</span>
+        </div>
         <label>Prompt</label>
-        <textarea id="prompt" placeholder="Serana walking past camera, orbit around her figure, cinematic, coherent motion"></textarea>
-        <label>Image URL (I2V / still reference)</label>
+        <textarea id="prompt" placeholder="Serana walking past camera, orbit, cinematic coherent motion"></textarea>
+        <label>Negative / avoid</label>
+        <textarea id="neg" style="min-height:56px" placeholder="blurry, watermark, extra limbs"></textarea>
+        <label>Source image (I2V / still) — URL or file</label>
         <input type="url" id="imageUrl" placeholder="https://…jpg" />
-        <label>Video URL (extend)</label>
+        <input type="file" id="file" accept="image/*,video/*" />
+        <label>Video URL (extend / V2V)</label>
         <input type="url" id="videoUrl" placeholder="https://…mp4" />
         <div class="grid2">
           <div>
@@ -118,58 +103,49 @@
               <option value="cinematic">Cinematic</option>
               <option value="handheld">Handheld</option>
               <option value="trailer">Trailer</option>
-              <option value="product">Product</option>
-              <option value="raw">Raw prompt</option>
+              <option value="raw">Raw</option>
             </select>
           </div>
           <div>
             <label>Quality</label>
-            <select id="draft">
-              <option value="0">Final</option>
-              <option value="1">Draft (faster)</option>
-            </select>
+            <select id="draft"><option value="0">Final</option><option value="1">Draft</option></select>
           </div>
         </div>
-        <div class="grid2">
-          <div><label>Width</label><input type="number" id="width" placeholder="auto" /></div>
-          <div><label>Height</label><input type="number" id="height" placeholder="auto" /></div>
-        </div>
-        <label class="chk"><input type="checkbox" id="adult" /> Adult 18+ (you requested; never minors)</label>
+        <label>Duration (video) <span id="durLab">4s → 81 frames</span></label>
+        <input type="range" id="dur" min="2" max="14" value="4" />
+        <label class="chk"><input type="checkbox" id="adult" /> Adult 18+ (never minors)</label>
         <div class="row">
           <button type="button" class="gold-btn" id="go">Generate</button>
           <button type="button" class="ghost" id="planOnly">Plan only</button>
         </div>
+        <div class="bar"><i id="bar"></i></div>
         <div id="log"></div>
       </div>
       <div class="card">
-        <div class="gold" style="font-size:.85rem">LIVE RESULT</div>
+        <div class="gold" style="font-size:.82rem">LIVE</div>
         <p class="hint" id="jobMeta">No job yet.</p>
         <video id="player" controls playsinline class="hide"></video>
         <img id="still" class="preview hide" alt="" />
         <div class="row">
           <button type="button" class="ghost" id="poll">Refresh job</button>
-          <button type="button" class="ghost" id="toPlayer">Send to player</button>
+          <button type="button" class="ghost" id="toPlayer">Player</button>
         </div>
       </div>
     </section>
-
     <section id="tab-player" class="hide card">
-      <div class="gold" style="font-size:.85rem">PLAYER</div>
-      <p class="hint">Paste a completed video URL or pick from queue.</p>
+      <div class="gold" style="font-size:.82rem">PLAYER</div>
       <input type="url" id="playUrl" placeholder="https://…mp4" />
       <div class="row"><button type="button" class="gold-btn" id="loadPlay">Play</button></div>
       <video id="player2" controls playsinline style="width:100%;margin-top:1rem;border-radius:12px;background:#000"></video>
     </section>
-
-    <section id="tab-queue" class="hide card">
-      <div class="gold" style="font-size:.85rem">AUTOMATION QUEUE</div>
-      <p class="hint">Jobs stay in this browser. Poll until COMPLETED.</p>
+    <section id="tab-lib" class="hide card">
+      <div class="gold" style="font-size:.82rem">LIBRARY</div>
+      <p class="hint">Jobs stay in this browser. Click to play.</p>
       <div id="jobs"></div>
     </section>
-
     <section id="tab-chat" class="hide card">
-      <div class="gold" style="font-size:.85rem">AGENT G2P</div>
-      <p class="hint">Dual-engine for questions. Use Generate tab for media.</p>
+      <div class="gold" style="font-size:.82rem">AGENT G2P</div>
+      <p class="hint">Dual-engine for questions. Media lives on Generate.</p>
       <textarea id="q" placeholder="solve 2x^2+3x-5=0"></textarea>
       <div class="row">
         <label class="chk"><input type="checkbox" id="verify" /> Verify</label>
@@ -179,112 +155,152 @@
     </section>
   </div>
   <script>
-    const QKEY = "g2p-forge-jobs-v1";
+    const QKEY = "g2p-forge-lib-v2";
+    const MODES = {
+      text: [["t2t","Text→Text"],["i2t","Image→Text"],["v2t","Video→Text"]],
+      image: [["still","Text→Image"],["i2i","Image→Image"],["v2i","Video→Image"]],
+      video: [["t2v","Text→Video"],["i2v","Image→Video"],["extend","Video extend"]],
+    };
+    let group = "video";
+    let kind = "t2v";
+    let imageB64 = "";
+    let currentId = "";
+    const $ = (id) => document.getElementById(id);
     const jobs = () => { try { return JSON.parse(localStorage.getItem(QKEY) || "[]"); } catch { return []; } };
     const saveJobs = (a) => localStorage.setItem(QKEY, JSON.stringify(a.slice(-40)));
-    let currentId = "";
-
-    const $ = (id) => document.getElementById(id);
     async function j(url, opts) {
       const r = await fetch(url, opts);
       const t = await r.text();
       try { return JSON.parse(t); } catch { return { raw: t, status: r.status }; }
     }
+    function frames(sec) { return sec <= 4 ? 81 : sec <= 8 ? 121 : 161; }
+    function setBar(p) { $("bar").style.width = Math.round(p * 100) + "%"; }
 
     document.querySelectorAll("nav [data-tab]").forEach((b) => {
       b.onclick = () => {
         document.querySelectorAll("nav [data-tab]").forEach((x) => x.classList.toggle("on", x === b));
-        ["gen", "player", "queue", "chat"].forEach((t) => {
-          $("tab-" + t).classList.toggle("hide", t !== b.dataset.tab);
-        });
-        if (b.dataset.tab === "queue") renderJobs();
+        ["gen","player","lib","chat"].forEach((t) => $("tab-" + t).classList.toggle("hide", t !== b.dataset.tab));
+        if (b.dataset.tab === "lib") renderJobs();
       };
     });
+    document.querySelectorAll("[data-group]").forEach((b) => {
+      b.onclick = () => {
+        group = b.dataset.group;
+        document.querySelectorAll("[data-group]").forEach((x) => x.classList.toggle("on", x === b));
+        kind = MODES[group][0][0];
+        paintModes();
+      };
+    });
+    function paintModes() {
+      $("modes").innerHTML = "";
+      MODES[group].forEach(([id, lab]) => {
+        const btn = document.createElement("button");
+        btn.type = "button"; btn.className = "chip" + (kind === id ? " on" : "");
+        btn.textContent = lab;
+        btn.onclick = () => { kind = id; paintModes(); };
+        $("modes").appendChild(btn);
+      });
+    }
+    paintModes();
+    document.querySelectorAll("[data-group]").forEach((x) => x.classList.toggle("on", x.dataset.group === "video"));
+
+    $("cSerana").onclick = () => $("cSerana").classList.toggle("on");
+    $("cDanny").onclick = () => $("cDanny").classList.toggle("on");
+    $("dur").oninput = () => {
+      const s = Number($("dur").value);
+      $("durLab").textContent = s + "s → " + frames(s) + " frames";
+    };
+    $("file").onchange = () => {
+      const f = $("file").files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => { imageB64 = String(r.result || ""); $("log").textContent = "Loaded " + f.name; };
+      r.readAsDataURL(f);
+    };
 
     async function ready() {
       try {
         const s = await j("/api/studio");
-        const el = $("status");
-        if (s.hasApiKey) {
-          el.textContent = "G2P Forge online · RunPod ready · no xAI";
-          el.className = "ok";
-        } else {
-          el.textContent = "Studio up · set RUNPOD_API_KEY then restart cluster for GPU";
-          el.className = "bad";
-        }
-      } catch {
-        $("status").textContent = "Studio offline — start cluster";
-        $("status").className = "bad";
-      }
+        if (s.hasApiKey) { $("status").textContent = "G2P Forge · WAN ready · no xAI"; $("status").className = "ok"; }
+        else { $("status").textContent = "Studio up · set RUNPOD_API_KEY then restart"; $("status").className = "bad"; }
+      } catch { $("status").textContent = "Start the cluster"; $("status").className = "bad"; }
     }
 
     function renderJobs() {
       const list = jobs();
       $("jobs").innerHTML = list.length ? "" : "<p class='hint'>Empty.</p>";
-      list.slice().reverse().forEach((j) => {
+      list.slice().reverse().forEach((item) => {
         const d = document.createElement("div");
         d.className = "job";
-        d.innerHTML = "<strong>" + (j.kind || "job") + "</strong> · " + (j.status || "?") +
-          "<div>" + (j.prompt || "").slice(0, 140) + "</div>" +
-          (j.jobId ? "<div>id " + j.jobId + "</div>" : "") +
-          (j.video ? "<a href='" + j.video + "' target='_blank' rel='noopener'>open video</a>" : "");
+        d.innerHTML = "<strong>" + (item.kind || "job") + "</strong> · " + (item.status || "?") +
+          "<div>" + (item.prompt || "").slice(0, 140) + "</div>" +
+          (item.jobId ? "<div>id " + item.jobId + "</div>" : "") +
+          (item.video ? "<button type='button' class='link' data-url='" + item.video + "'>play</button>" : "");
+        const b = d.querySelector("[data-url]");
+        if (b) b.onclick = () => { $("playUrl").value = b.dataset.url; $("player2").src = b.dataset.url; document.querySelector("[data-tab=player]").click(); };
         $("jobs").appendChild(d);
       });
     }
 
     function showMedia(url) {
       if (!url) return;
-      const vid = $("player");
-      const img = $("still");
-      const still = $("kind").value === "still" && !/\.mp4|\.webm/i.test(url);
-      if (still) {
-        img.src = url; img.classList.remove("hide"); vid.classList.add("hide");
-      } else {
-        vid.src = url; vid.classList.remove("hide"); img.classList.add("hide");
-      }
-      $("playUrl").value = url;
-      $("player2").src = url;
+      const still = (kind === "still" || kind === "i2i" || kind === "v2i") && !/\.mp4|\.webm|video\//i.test(url);
+      if (still) { $("still").src = url; $("still").classList.remove("hide"); $("player").classList.add("hide"); }
+      else { $("player").src = url; $("player").classList.remove("hide"); $("still").classList.add("hide"); }
+      $("playUrl").value = url; $("player2").src = url;
+    }
+
+    function fullPrompt() {
+      let t = $("prompt").value.trim();
+      if ($("cSerana").classList.contains("on") && !/serana/i.test(t)) t = "Serana. " + t;
+      if ($("cDanny").classList.contains("on") && !/danny/i.test(t)) t = "Danny. " + t;
+      return t;
     }
 
     async function generate(planOnly) {
-      const text = $("prompt").value.trim();
+      const text = fullPrompt();
       if (!text) { $("log").textContent = "Enter a prompt."; return; }
-      $("go").disabled = true;
-      $("log").textContent = planOnly ? "Planning…" : "Submitting to WAN…";
+      if (kind === "t2t" || kind === "i2t" || kind === "v2t") {
+        $("log").textContent = "Agent…";
+        const r = await j("/api/pipeline", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, verify: false, autoVideo: false }),
+        });
+        $("log").textContent = r.content || JSON.stringify(r);
+        return;
+      }
+      $("go").disabled = true; setBar(0.08); $("log").textContent = planOnly ? "Planning…" : "Submitting WAN 2.2…";
       const body = {
         text,
-        kind: $("kind").value,
+        kind: kind === "i2i" || kind === "v2i" ? "still" : kind,
         imageUrl: $("imageUrl").value.trim() || undefined,
+        imageBase64: imageB64 || undefined,
         videoUrl: $("videoUrl").value.trim() || undefined,
         preset: $("preset").value || undefined,
         draft: $("draft").value === "1",
         adult: $("adult").checked,
-        width: $("width").value ? Number($("width").value) : undefined,
-        height: $("height").value ? Number($("height").value) : undefined,
+        durationSec: Number($("dur").value),
+        negativePrompt: $("neg").value.trim() || undefined,
       };
       try {
         const r = await j(planOnly ? "/api/video-plan" : "/api/video", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
         });
-        if (r.ok === false) {
-          $("log").textContent = "Error: " + (r.error || r.reason || JSON.stringify(r));
-        } else if (r.submitted) {
-          currentId = r.jobId;
+        if (r.ok === false) { $("log").textContent = "Error: " + (r.error || r.reason || JSON.stringify(r)); setBar(0); }
+        else if (r.submitted) {
+          currentId = r.jobId; setBar(0.25);
           $("jobMeta").textContent = "Job " + r.jobId + " · " + (r.status || "IN_QUEUE");
           $("log").textContent = (r.plan && r.plan.directedPrompt) || "Submitted.";
           const all = jobs();
-          all.push({ jobId: r.jobId, status: r.status, prompt: text, kind: body.kind, ts: Date.now() });
+          all.push({ jobId: r.jobId, status: r.status, prompt: text, kind, ts: Date.now() });
           saveJobs(all);
           poll();
         } else {
+          setBar(0.15);
           $("log").textContent = (r.message || "Plan") + "\n\n" + ((r.plan && r.plan.directedPrompt) || r.directedPrompt || "");
           $("jobMeta").textContent = r.submitted === false ? "Plan only — GPU key not on backends" : "Plan";
         }
-      } catch (e) {
-        $("log").textContent = String(e);
-      }
+      } catch (e) { $("log").textContent = String(e); }
       $("go").disabled = false;
     }
 
@@ -294,36 +310,27 @@
       $("jobMeta").textContent = (r.status || "?") + " · " + currentId;
       const all = jobs().map((x) => x.jobId === currentId ? { ...x, status: r.status, video: r.video } : x);
       saveJobs(all);
-      if (r.video) showMedia(r.video);
-      if (r.status === "IN_QUEUE" || r.status === "IN_PROGRESS") {
-        setTimeout(poll, 4000);
-      }
+      if (r.status === "IN_QUEUE") setBar(0.35);
+      if (r.status === "IN_PROGRESS") setBar(0.65);
+      if (r.video) { showMedia(r.video); setBar(1); }
+      if (r.status === "IN_QUEUE" || r.status === "IN_PROGRESS") setTimeout(poll, 4000);
     }
 
     $("go").onclick = () => generate(false);
     $("planOnly").onclick = () => generate(true);
     $("poll").onclick = poll;
-    $("toPlayer").onclick = () => {
-      document.querySelector("[data-tab=player]").click();
-    };
-    $("loadPlay").onclick = () => {
-      const u = $("playUrl").value.trim();
-      if (u) $("player2").src = u;
-    };
+    $("toPlayer").onclick = () => document.querySelector("[data-tab=player]").click();
+    $("loadPlay").onclick = () => { const u = $("playUrl").value.trim(); if (u) $("player2").src = u; };
     $("ask").onclick = async () => {
-      const text = $("q").value.trim();
-      if (!text) return;
+      const text = $("q").value.trim(); if (!text) return;
       $("ans").textContent = "Thinking…";
       const r = await j("/api/pipeline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, verify: $("verify").checked, autoVideo: false }),
       });
       $("ans").textContent = r.content || JSON.stringify(r, null, 2);
     };
-
-    ready();
-    setInterval(ready, 12000);
+    ready(); setInterval(ready, 12000);
   </script>
 </body>
 </html>

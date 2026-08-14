@@ -163,6 +163,7 @@ export function planVideo(userText, opts = {}) {
     height: Number(opts.height) || (draft ? Math.min(cfg.height, 640) : cfg.height),
     length:
       Number(opts.length) ||
+      lengthFromDuration(opts.durationSec, kind) ||
       (kind === "still" ? 17 : draft ? Math.min(cfg.length, 49) : cfg.length),
     steps: Number(opts.steps) || (draft ? Math.max(6, cfg.steps - 4) : cfg.steps),
     cfg: Number(opts.cfg) || cfg.cfg,
@@ -173,10 +174,25 @@ export function planVideo(userText, opts = {}) {
     notes: [
       `Preset: ${preset}`,
       draft ? "Draft pass" : "Final pass",
-      "GPU: RunPod WAN when RUNPOD_API_KEY set",
+      "GPU: RunPod WAN 2.2 TI2V (AetherForge payload + G2P director)",
     ],
     director: DIRECTOR_VERSION,
   };
+}
+
+function lengthFromDuration(sec, kind) {
+  if (kind === "still") return 17;
+  const d = Number(sec) || 0;
+  if (!d) return undefined;
+  if (d <= 4) return 81;
+  if (d <= 8) return 121;
+  return 161;
+}
+
+function stripDataPrefix(s) {
+  if (!s || typeof s !== "string") return s;
+  if (s.startsWith("data:") && s.includes(",")) return s.split(",")[1];
+  return s;
 }
 
 /** True when user wants a generated video (not just media Q&A). */
@@ -261,18 +277,21 @@ export async function runVideoJob(userText, opts = {}) {
   const input = {
     prompt: plan.directedPrompt,
     positive_prompt: plan.directedPrompt,
-    negative_prompt: plan.negativePrompt,
+    negative_prompt: opts.negativePrompt || plan.negativePrompt,
     width: plan.width,
     height: plan.height,
     length: plan.length,
     steps: plan.steps,
     cfg: plan.cfg,
+    seed: Number(opts.seed) || Math.floor(Date.now() % 2 ** 32),
   };
   if (plan.loraPairs) {
     input.lora_pairs = plan.loraPairs;
     input.loras = plan.loraPairs;
   }
   if (opts.imageUrl) input.image_url = opts.imageUrl;
+  const b64 = stripDataPrefix(opts.imageBase64 || opts.image_base64);
+  if (b64) input.image_base64 = b64;
   if (opts.videoUrl) {
     input.video_url = opts.videoUrl;
     input.start_image = opts.imageUrl;
@@ -323,10 +342,17 @@ export function studioReady() {
 
 function extractVideoRef(data) {
   if (!data || typeof data !== "object") return undefined;
-  for (const key of ["video_url", "url", "video", "mp4", "result"]) {
-    if (typeof data[key] === "string" && data[key].length > 8) return data[key];
+  for (const key of ["video_url", "url", "video", "video_base64", "mp4", "result"]) {
+    const val = data[key];
+    if (typeof val !== "string" || val.length < 12) continue;
+    if (/^https?:\/\//i.test(val) || val.startsWith("data:")) return val;
+    if (val.length > 200 && !val.includes(" ")) {
+      return val.startsWith("/9j/") ? `data:image/jpeg;base64,${val}` : `data:video/mp4;base64,${val}`;
+    }
   }
-  if (typeof data.output === "string" && data.output.length > 8) return data.output;
+  if (typeof data.output === "string" && data.output.length > 12) {
+    return extractVideoRef({ video: data.output });
+  }
   if (data.output && typeof data.output === "object") return extractVideoRef(data.output);
   return undefined;
 }
@@ -348,7 +374,6 @@ export async function pollVideoJob(jobId) {
       jobId,
       status: sj.status || "UNKNOWN",
       video: extractVideoRef(sj),
-      raw: sj,
     };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
