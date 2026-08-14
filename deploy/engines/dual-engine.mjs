@@ -184,9 +184,10 @@ function fmt(n) {
 }
 
 export function buildDraft({ host, text, route }) {
-  const w = route.winner || "companion";
-  const conf = route.confidence || "medium";
-  const solved = w === "math" ? trySolveMath(text) : null;
+  const w0 = route.winner || "companion";
+  const solved = trySolveMath(text);
+  const w = solved ? "math" : w0;
+  const conf = solved ? "high" : route.confidence || "medium";
   const lines = [
     `[DRAFT | ${host}] specialist=${w} conf=${conf}`,
     `META: A=${route.builds?.A?.winner} B=${route.builds?.B?.winner} C=${route.builds?.C?.winner}`,
