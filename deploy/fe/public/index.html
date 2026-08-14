@@ -108,6 +108,10 @@
           <select id="draft"><option value="0">Final</option><option value="1">Draft</option></select>
         </div>
       </div>
+      <div class="grid2">
+        <div><label>Steps</label><input type="number" id="steps" min="6" max="30" value="12" /></div>
+        <div><label>Seed (0 = random)</label><input type="number" id="seed" min="0" value="0" /></div>
+      </div>
       <label>Length <span id="durLab" class="meta">4s · 81 frames</span></label>
       <input type="range" id="dur" min="2" max="14" value="4" />
       <label class="chk"><input type="checkbox" id="adult" /> Adult 18+ (never minors)</label>
@@ -282,7 +286,7 @@
         return;
       }
       $("go").disabled = true; bar(0.1);
-      $("log").textContent = planOnly ? "Director…" : "WAN 2.2…";
+      $("log").textContent = planOnly ? "Director + critic…" : "Studio run · critic → WAN…";
       const body = {
         text, kind: (kind === "i2i" || kind === "v2i") ? "still" : kind,
         imageUrl: $("imageUrl").value.trim() || undefined,
@@ -293,9 +297,12 @@
         adult: $("adult").checked,
         durationSec: Number($("dur").value),
         negativePrompt: $("neg").value.trim() || undefined,
+        steps: Number($("steps").value) || undefined,
+        seed: Number($("seed").value) || undefined,
+        planOnly: !!planOnly,
       };
       try {
-        const r = await api(planOnly ? "/api/video-plan" : "/api/video", {
+        const r = await api("/api/studio/run", {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
         });
         if (r.ok === false) { $("log").textContent = r.error || r.reason || JSON.stringify(r); bar(0); }

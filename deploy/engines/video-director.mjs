@@ -253,8 +253,13 @@ function normalizeEndpoint(raw) {
 
 /** Submit to RunPod if env configured; always returns director plan. */
 export async function runVideoJob(userText, opts = {}) {
-  const plan = planVideo(userText, opts);
+  const plan = opts.prePlan && opts.prePlan.ok !== false ? opts.prePlan : planVideo(userText, opts);
   if (!plan.ok) return plan;
+  if (opts.directedOverride) plan.directedPrompt = opts.directedOverride;
+  if (Number(opts.steps)) plan.steps = Number(opts.steps);
+  if (Number(opts.cfg)) plan.cfg = Number(opts.cfg);
+  if (Number(opts.width)) plan.width = Number(opts.width);
+  if (Number(opts.height)) plan.height = Number(opts.height);
 
   const apiKey = process.env.RUNPOD_API_KEY?.trim();
   const epRaw =

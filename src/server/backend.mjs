@@ -19,6 +19,12 @@ import {
   pollVideoJob,
   studioReady,
 } from "../../deploy/engines/video-director.mjs";
+import {
+  runStudioJob,
+  enqueueStudioJob,
+  queueSnapshot,
+  STUDIO_RUN_VERSION,
+} from "../../deploy/engines/studio-run.mjs";
 
 const PORT = Number(process.env.PORT || 3001);
 const HOST_ID = process.env.HOST_ID || `be-${PORT}`;
@@ -637,7 +643,23 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === "/api/studio" && req.method === "GET") {
-    return json(res, 200, { host: HOST_ID, director: DIRECTOR_VERSION, ...studioReady() });
+    return json(res, 200, {
+      host: HOST_ID,
+      director: DIRECTOR_VERSION,
+      studioRun: STUDIO_RUN_VERSION,
+      queue: queueSnapshot(),
+      ...studioReady(),
+    });
+  }
+
+  if (url.pathname === "/api/studio/run" && req.method === "POST") {
+    const body = await readJsonBody(req);
+    const out = body.queue === false ? await runStudioJob(body) : await enqueueStudioJob(body);
+    return json(res, out.ok === false ? 400 : 200, { host: HOST_ID, ...out });
+  }
+
+  if (url.pathname === "/api/studio/queue" && req.method === "GET") {
+    return json(res, 200, { host: HOST_ID, ...queueSnapshot() });
   }
 
   if (url.pathname === "/api/bake") {
