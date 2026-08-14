@@ -12,7 +12,7 @@
  *   Engines: Engine-D (draft) then Engine-R (refine) — series, different roles.
  */
 
-export const ENGINE_VERSION = "g2p-dual-v2.1";
+export const ENGINE_VERSION = "g2p-dual-v2.2";
 
 /** Structured rubric — each 0..1 */
 export function critique(text, draft, winner) {
@@ -144,7 +144,30 @@ export function trySolveMath(text) {
       };
     }
   }
-  return null;
+  return trySimpleArith(text);
+}
+
+function trySimpleArith(text) {
+  const m = String(text).replace(/,/g, "").match(/(-?\d+\.?\d*)\s*([+\-*/x×])\s*(-?\d+\.?\d*)/);
+  if (!m) return null;
+  const a = parseFloat(m[1]);
+  const b = parseFloat(m[3]);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  const op = m[2] === "x" || m[2] === "×" ? "*" : m[2];
+  let v;
+  if (op === "+") v = a + b;
+  else if (op === "-") v = a - b;
+  else if (op === "*") v = a * b;
+  else if (op === "/") {
+    if (b === 0) return { kind: "arith", steps: ["Division by zero"], answer: "undefined", answerHint: "undefined" };
+    v = a / b;
+  } else return null;
+  return {
+    kind: "arith",
+    steps: [`Compute ${a} ${op} ${b}`],
+    answer: String(fmt(v)),
+    answerHint: String(fmt(v)),
+  };
 }
 
 function parseCoef(s, def) {
@@ -344,18 +367,8 @@ export async function runSequentialPipeline({
     refined = buildRefine({ host, text, draftPayload: draft });
   }
 
-  // Second verify pass if quality still low
-  let final = refined;
-  const q = refined.critique?.quality ?? refined.quality;
-  if (typeof q === "number" && q < 0.62 && !refined.blocked) {
-    const again = buildRefine({
-      host,
-      text,
-      draftPayload: { ...draft, content: refined.content, winner: refined.winner },
-    });
-    final = again;
-    final.doublePass = true;
-  }
+  // Extra critic only when weak — no added wait on already-good answers
+  const final = strengthenIfWeak({ host, text, draft, refined });
 
   return {
     ok: true,
@@ -374,9 +387,26 @@ export async function runSequentialPipeline({
     peerError: final.peerError,
     fallback: final.fallback,
     doublePass: final.doublePass || false,
+    extraLoop: !!final.extraLoop,
     engine: ENGINE_VERSION,
-    note: "Series: Engine-D draft -> Engine-R critic/edit (quality > parallel speed).",
+    note: final.extraLoop
+      ? "Extra critic on a weak pass only — strong answers stay fast."
+      : "Series: Engine-D draft -> Engine-R critic/edit (quality > parallel speed).",
   };
+}
+
+/** Only runs when quality < 0.75. Strong answers unchanged (no extra latency). */
+export function strengthenIfWeak({ host, text, draft, refined }) {
+  const q = refined.critique?.quality ?? refined.quality ?? 0;
+  if (refined.blocked || q >= 0.75) return { ...refined, extraLoop: false };
+  const again = buildRefine({
+    host,
+    text,
+    draftPayload: { ...draft, content: refined.content, winner: refined.winner },
+  });
+  again.extraLoop = true;
+  again.doublePass = true;
+  return again;
 }
 
 /** Shared specialist guess — used by Agent G2P peers and G2P-X (never a downgrade). */

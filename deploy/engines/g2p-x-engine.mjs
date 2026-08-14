@@ -4,7 +4,7 @@
  * Extra = optional Grok 4.5 when a key exists (appended, never replaces the floor).
  * Agent G2P stays independent (no xAI).
  */
-import { buildDraft, buildRefine, critique, simpleRoute } from "./dual-engine.mjs";
+import { buildDraft, buildRefine, critique, simpleRoute, strengthenIfWeak } from "./dual-engine.mjs";
 import { directorLegalBlock } from "./video-director.mjs";
 
 export const G2PX_ENGINE = "g2p-x-full-v2";
@@ -44,7 +44,8 @@ export async function runG2PX(text) {
 
   const route = simpleRoute(t);
   const draft = buildDraft({ host: "g2p-x", text: t, route });
-  const refined = buildRefine({ host: "g2p-x", text: t, draftPayload: draft });
+  const first = buildRefine({ host: "g2p-x", text: t, draftPayload: draft });
+  const refined = strengthenIfWeak({ host: "g2p-x", text: t, draft, refined: first });
 
   let extra = null;
   try {
