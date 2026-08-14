@@ -159,8 +159,8 @@ export function planVideo(userText, opts = {}) {
             ? "i2v"
             : "t2v",
     needsImage: !!(opts.hasImage || opts.imageUrl || kind === "i2v" || kind === "extend"),
-    width: Number(opts.width) || (draft ? Math.min(cfg.width, 640) : cfg.width),
-    height: Number(opts.height) || (draft ? Math.min(cfg.height, 640) : cfg.height),
+    width: Number(opts.width) || aspectSize(opts.aspect, cfg, draft).w,
+    height: Number(opts.height) || aspectSize(opts.aspect, cfg, draft).h,
     length:
       Number(opts.length) ||
       lengthFromDuration(opts.durationSec, kind) ||
@@ -187,6 +187,15 @@ function lengthFromDuration(sec, kind) {
   if (d <= 4) return 81;
   if (d <= 8) return 121;
   return 161;
+}
+
+function aspectSize(aspect, cfg, draft) {
+  const a = String(aspect || "").trim();
+  const cap = (n) => (draft ? Math.min(n, 640) : n);
+  if (a === "16:9") return { w: cap(832), h: cap(480) };
+  if (a === "9:16") return { w: cap(480), h: cap(832) };
+  if (a === "1:1") return { w: cap(640), h: cap(640) };
+  return { w: cap(cfg.width), h: cap(cfg.height) };
 }
 
 function stripDataPrefix(s) {
