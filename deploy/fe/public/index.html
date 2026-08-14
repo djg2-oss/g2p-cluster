@@ -3,197 +3,219 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>G2P Forge Studio</title>
+  <title>G2P Studio</title>
   <style>
     :root {
-      --black: #050505; --panel: #0c0c0c; --ink: #f3efe4; --muted: #8d8474;
-      --gold: #d4af37; --gold2: #f0d78c; --line: #3a3220; --danger: #c45c4a;
+      --bg: #070707;
+      --elev: #101010;
+      --panel: #141414;
+      --fg: #f2eee6;
+      --muted: #9a9183;
+      --line: color-mix(in oklab, #f2eee6 12%, transparent);
+      --gold: #c4a35a;
+      --gold-ink: #120e04;
+      --danger: #c45c4a;
+      --ok: #7d9a6a;
+      --r-sm: 8px; --r-md: 12px; --r-lg: 20px;
+      --font: "Segoe UI", system-ui, sans-serif;
+      --mono: ui-monospace, Consolas, monospace;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100dvh; background: #050505; color: var(--ink); font: 15px/1.45 "Segoe UI", system-ui, sans-serif; }
-    .gold {
-      background: linear-gradient(165deg, #fff8e0, #f0d78c, #d4af37, #a67c00, #f5e6a8);
-      -webkit-background-clip: text; background-clip: text; color: transparent;
-      -webkit-text-stroke: 0.45px rgba(232,230,225,.4); font-weight: 800; letter-spacing: .08em;
+    html, body { margin: 0; min-height: 100dvh; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--font); }
+    button, [role=button] { cursor: pointer; font: inherit; }
+    button:disabled { opacity: .5; cursor: wait; }
+    header {
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-bottom: 1px solid var(--line); background: #050505;
     }
-    header { display: flex; flex-wrap: wrap; gap: .7rem; align-items: center; justify-content: space-between; padding: .8rem 1rem; border-bottom: 1px solid var(--line); background: #000; }
-    nav { display: flex; flex-wrap: wrap; gap: .35rem; }
-    nav button, .ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: .42rem .8rem; font-weight: 650; cursor: pointer; }
-    nav button.on, .gold-btn {
-      background: linear-gradient(165deg, #f5f2ea, #e8d5a3, #d4af37, #a0893a);
-      color: #0a0800; border: 1px solid #f0e6c8; font-weight: 800; cursor: pointer;
+    .mark { font-weight: 650; letter-spacing: .14em; font-size: 13px; color: var(--gold); }
+    #ready { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    #ready.ok { color: var(--ok); } #ready.bad { color: var(--danger); }
+    .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tabs button, .chip {
+      min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line);
+      background: transparent; color: var(--muted);
     }
-    .gold-btn { border-radius: 999px; padding: .55rem 1.15rem; }
-    .gold-btn:disabled { opacity: .5; cursor: wait; }
-    .wrap { max-width: 1140px; margin: 0 auto; padding: 1rem; display: grid; gap: 1rem; }
-    @media (min-width: 920px) { .split { display: grid; grid-template-columns: 1.12fr .88fr; gap: 1rem; align-items: start; } }
+    .tabs button.on, .chip.on { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); font-weight: 600; }
+    .app {
+      display: grid; gap: 12px; padding: 12px; max-width: 1280px; margin: 0 auto;
+    }
+    @media (min-width: 980px) {
+      .app { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); align-items: start; }
+    }
     .card {
-      background: linear-gradient(#0c0c0c,#0c0c0c) padding-box, linear-gradient(135deg,#f5f2ea,#d4af37,#8a7340,#e8e6e1) border-box;
-      border: 1px solid transparent; border-radius: 16px; padding: 1rem;
+      background: var(--elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px;
     }
-    label { display: block; font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: .55rem 0 .25rem; }
-    textarea, input[type=text], input[type=url], select, input[type=number] {
-      width: 100%; background: #000; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: .6rem; font: inherit;
+    h1 { margin: 0 0 4px; font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
+    .sub { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+    label { display: block; margin: 12px 0 6px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+    textarea, input, select {
+      width: 100%; background: #0a0a0a; color: var(--fg); border: 1px solid var(--line);
+      border-radius: var(--r-sm); padding: 10px 12px; font: inherit;
     }
-    textarea { min-height: 92px; resize: vertical; }
-    .row { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; margin-top: .65rem; }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
-    .chk { display: flex; align-items: center; gap: .4rem; font-size: .8rem; color: var(--muted); text-transform: none; letter-spacing: 0; }
-    #status { font-size: .75rem; color: var(--muted); }
-    #status.ok { color: var(--gold2); } #status.bad { color: var(--danger); }
-    .modes { display: flex; flex-wrap: wrap; gap: .35rem; margin: .45rem 0; }
-    .modes button { font-size: .72rem; }
-    .chip { border-radius: 999px; border: 1px solid var(--line); background: #000; color: var(--muted); padding: .35rem .7rem; cursor: pointer; font-size: .75rem; }
-    .chip.on { border-color: var(--gold); color: #0a0800; background: linear-gradient(165deg,#f5f2ea,#d4af37); font-weight: 800; }
-    .job { font-size: .82rem; border-top: 1px solid var(--line); padding: .6rem 0; }
-    .job a, .job button.link { color: var(--gold2); background: none; border: 0; cursor: pointer; padding: 0; font: inherit; }
-    video, img.preview { width: 100%; border-radius: 12px; background: #000; max-height: 440px; }
-    .hide { display: none; }
-    .hint { font-size: .8rem; color: var(--muted); }
-    #log { white-space: pre-wrap; font-size: .8rem; color: #d8cba8; max-height: 180px; overflow: auto; }
-    .bar { height: 6px; background: #1a160e; border-radius: 99px; overflow: hidden; margin-top: .4rem; }
-    .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#a0893a,#f0d78c,#d4af37); }
-    .thumb { width: 40px; height: 52px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+    textarea { min-height: 96px; resize: vertical; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .primary {
+      min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px;
+      background: var(--gold); color: var(--gold-ink); font-weight: 650;
+    }
+    .ghost {
+      min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line);
+      background: transparent; color: var(--fg);
+    }
+    .bar { height: 4px; background: #1c1a16; border-radius: 99px; overflow: hidden; margin-top: 10px; }
+    .bar > i { display: block; height: 100%; width: 0; background: var(--gold); transition: width 250ms ease; }
+    video, .still { width: 100%; max-height: 460px; border-radius: var(--r-md); background: #000; }
+    .hide { display: none !important; }
+    .job { padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
+    .job button { background: none; border: 0; color: var(--gold); padding: 0; min-height: 0; }
+    .meta { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+    #log, #ans { white-space: pre-wrap; font-size: 13px; color: #d8cbb4; max-height: 200px; overflow: auto; }
+    .chk { display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--muted); font-weight: 500; }
+    @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <header>
     <div>
-      <div class="gold" style="font-size:1.15rem">G2P FORGE</div>
-      <div id="status">Checking studio…</div>
+      <div class="mark">G2P STUDIO</div>
+      <div id="ready">Checking engines…</div>
     </div>
-    <nav>
-      <button type="button" class="on" data-tab="gen">Generate</button>
-      <button type="button" data-tab="player">Player</button>
-      <button type="button" data-tab="lib">Library</button>
-      <button type="button" data-tab="chat">Agent</button>
+    <nav class="tabs">
+      <button type="button" class="on" data-view="board">Board</button>
+      <button type="button" data-view="stage">Stage</button>
+      <button type="button" data-view="lib">Library</button>
+      <button type="button" data-view="agent">Agent</button>
     </nav>
   </header>
-  <div class="wrap">
-    <section id="tab-gen" class="split">
-      <div class="card">
-        <div class="gold" style="font-size:.82rem">STUDIO</div>
-        <p class="hint">G2P director + WAN 2.2 TI2V. Character only if you pick it. No xAI. Adult 18+ is your toggle. No minors.</p>
-        <div class="row" style="margin-top:.4rem">
-          <button type="button" class="chip" data-group="text">Text</button>
-          <button type="button" class="chip on" data-group="image">Image</button>
-          <button type="button" class="chip" data-group="video">Video</button>
-        </div>
-        <div class="modes" id="modes"></div>
-        <div class="row">
-          <button type="button" class="chip" id="cSerana">Serana</button>
-          <button type="button" class="chip" id="cDanny">Danny</button>
-          <span class="hint">optional — not forced</span>
-        </div>
-        <label>Prompt</label>
-        <textarea id="prompt" placeholder="Serana walking past camera, orbit, cinematic coherent motion"></textarea>
-        <label>Negative / avoid</label>
-        <textarea id="neg" style="min-height:56px" placeholder="blurry, watermark, extra limbs"></textarea>
-        <label>Source image (I2V / still) — URL or file</label>
-        <input type="url" id="imageUrl" placeholder="https://…jpg" />
-        <input type="file" id="file" accept="image/*,video/*" />
-        <label>Video URL (extend / V2V)</label>
-        <input type="url" id="videoUrl" placeholder="https://…mp4" />
-        <div class="grid2">
-          <div>
-            <label>Preset</label>
-            <select id="preset">
-              <option value="">Auto</option>
-              <option value="character">Character</option>
-              <option value="cinematic">Cinematic</option>
-              <option value="handheld">Handheld</option>
-              <option value="trailer">Trailer</option>
-              <option value="raw">Raw</option>
-            </select>
-          </div>
-          <div>
-            <label>Quality</label>
-            <select id="draft"><option value="0">Final</option><option value="1">Draft</option></select>
-          </div>
-        </div>
-        <label>Duration (video) <span id="durLab">4s → 81 frames</span></label>
-        <input type="range" id="dur" min="2" max="14" value="4" />
-        <label class="chk"><input type="checkbox" id="adult" /> Adult 18+ (never minors)</label>
-        <div class="row">
-          <button type="button" class="gold-btn" id="go">Generate</button>
-          <button type="button" class="ghost" id="planOnly">Plan only</button>
-        </div>
-        <div class="bar"><i id="bar"></i></div>
-        <div id="log"></div>
+
+  <main class="app">
+    <section class="card" id="view-board">
+      <h1>Generate</h1>
+      <p class="sub">AetherForge floor + G2P director. Agent G2P is independent — not Grok, not xAI. WAN 2.2 on RunPod.</p>
+
+      <div class="row" id="groups">
+        <button type="button" class="chip" data-g="text">Text</button>
+        <button type="button" class="chip" data-g="image">Image</button>
+        <button type="button" class="chip on" data-g="video">Video</button>
       </div>
-      <div class="card">
-        <div class="gold" style="font-size:.82rem">LIVE</div>
-        <p class="hint" id="jobMeta">No job yet.</p>
-        <video id="player" controls playsinline class="hide"></video>
-        <img id="still" class="preview hide" alt="" />
-        <div class="row">
-          <button type="button" class="ghost" id="poll">Refresh job</button>
-          <button type="button" class="ghost" id="toPlayer">Player</button>
+      <div class="row" id="modes" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:8px">
+        <button type="button" class="chip" id="cSerana">Serana</button>
+        <button type="button" class="chip" id="cDanny">Danny</button>
+        <span class="sub" style="margin:0">Optional cast. Off = your prompt only.</span>
+      </div>
+
+      <label for="prompt">Direction</label>
+      <textarea id="prompt" placeholder="Orbiting character walk, cinematic, coherent motion"></textarea>
+      <label for="neg">Avoid</label>
+      <textarea id="neg" style="min-height:56px" placeholder="blur, watermark, extra limbs"></textarea>
+
+      <label>Source still or clip</label>
+      <input type="url" id="imageUrl" placeholder="https://… image URL" />
+      <input type="file" id="file" accept="image/*,video/*" style="margin-top:8px" />
+      <input type="url" id="videoUrl" placeholder="https://… video URL for extend" style="margin-top:8px" />
+
+      <div class="grid2">
+        <div>
+          <label>Preset</label>
+          <select id="preset">
+            <option value="">Director auto</option>
+            <option value="character">Character</option>
+            <option value="cinematic">Cinematic</option>
+            <option value="handheld">Handheld</option>
+            <option value="trailer">Trailer</option>
+            <option value="raw">Raw prompt</option>
+          </select>
+        </div>
+        <div>
+          <label>Pass</label>
+          <select id="draft"><option value="0">Final</option><option value="1">Draft</option></select>
         </div>
       </div>
+      <label>Length <span id="durLab" class="meta">4s · 81 frames</span></label>
+      <input type="range" id="dur" min="2" max="14" value="4" />
+      <label class="chk"><input type="checkbox" id="adult" /> Adult 18+ (never minors)</label>
+
+      <div class="row" style="margin-top:14px">
+        <button type="button" class="primary" id="go">Generate</button>
+        <button type="button" class="ghost" id="plan">Director plan</button>
+      </div>
+      <div class="bar"><i id="bar"></i></div>
+      <p class="meta" id="jobMeta">Idle</p>
+      <div id="log"></div>
     </section>
-    <section id="tab-player" class="hide card">
-      <div class="gold" style="font-size:.82rem">PLAYER</div>
-      <input type="url" id="playUrl" placeholder="https://…mp4" />
-      <div class="row"><button type="button" class="gold-btn" id="loadPlay">Play</button></div>
-      <video id="player2" controls playsinline style="width:100%;margin-top:1rem;border-radius:12px;background:#000"></video>
+
+    <section class="card" id="view-stage">
+      <h1>Stage</h1>
+      <p class="sub">Completed stills and clips play here. Queue auto-polls WAN.</p>
+      <video id="player" controls playsinline class="hide"></video>
+      <img id="still" class="still hide" alt="" />
+      <div class="row" style="margin-top:10px">
+        <input type="url" id="playUrl" placeholder="Paste a finished URL" />
+        <button type="button" class="ghost" id="loadPlay">Load</button>
+        <button type="button" class="ghost" id="poll">Refresh job</button>
+      </div>
     </section>
-    <section id="tab-lib" class="hide card">
-      <div class="gold" style="font-size:.82rem">LIBRARY</div>
-      <p class="hint">Jobs stay in this browser. Click to play.</p>
+
+    <section class="card hide" id="view-lib">
+      <h1>Library</h1>
+      <p class="sub">Local queue. Click play when a job completes.</p>
       <div id="jobs"></div>
     </section>
-    <section id="tab-chat" class="hide card">
-      <div class="gold" style="font-size:.82rem">AGENT G2P</div>
-      <p class="hint">Dual-engine for questions. Media lives on Generate.</p>
+
+    <section class="card hide" id="view-agent">
+      <h1>Agent G2P</h1>
+      <p class="sub">Dual-engine draft → critic → edit. Math, build, life. Not Grok.</p>
       <textarea id="q" placeholder="solve 2x^2+3x-5=0"></textarea>
-      <div class="row">
-        <label class="chk"><input type="checkbox" id="verify" /> Verify</label>
-        <button type="button" class="gold-btn" id="ask">Ask</button>
+      <div class="row" style="margin-top:10px">
+        <label class="chk"><input type="checkbox" id="verify" /> Verify pass</label>
+        <button type="button" class="primary" id="ask">Ask</button>
       </div>
-      <pre id="ans" style="white-space:pre-wrap;font-size:.85rem;color:#d8cba8"></pre>
+      <pre id="ans"></pre>
     </section>
-  </div>
+  </main>
+
   <script>
-    const QKEY = "g2p-forge-lib-v2";
-    const MODES = {
-      text: [["t2t","Text→Text"],["i2t","Image→Text"],["v2t","Video→Text"]],
-      image: [["still","Text→Image"],["i2i","Image→Image"],["v2i","Video→Image"]],
-      video: [["t2v","Text→Video"],["i2v","Image→Video"],["extend","Video extend"]],
+    const KEY = "g2p-studio-lib-v4";
+    const MAP = {
+      text: [["t2t","Text to text"],["i2t","Image to text"],["v2t","Video to text"]],
+      image: [["still","Text to still"],["i2i","Image edit"],["v2i","Frame from video"]],
+      video: [["t2v","Text to video"],["i2v","Image to video"],["extend","Extend clip"]],
     };
-    let group = "video";
-    let kind = "t2v";
-    let imageB64 = "";
-    let currentId = "";
+    let group = "video", kind = "t2v", imageB64 = "", currentId = "";
     const $ = (id) => document.getElementById(id);
-    const jobs = () => { try { return JSON.parse(localStorage.getItem(QKEY) || "[]"); } catch { return []; } };
-    const saveJobs = (a) => localStorage.setItem(QKEY, JSON.stringify(a.slice(-40)));
-    async function j(url, opts) {
+    const list = () => { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } };
+    const save = (a) => localStorage.setItem(KEY, JSON.stringify(a.slice(-50)));
+    async function api(url, opts) {
       const r = await fetch(url, opts);
       const t = await r.text();
-      try { return JSON.parse(t); } catch { return { raw: t, status: r.status }; }
+      try { return JSON.parse(t); } catch { return { raw: t }; }
     }
-    function frames(sec) { return sec <= 4 ? 81 : sec <= 8 ? 121 : 161; }
-    function setBar(p) { $("bar").style.width = Math.round(p * 100) + "%"; }
+    const frames = (s) => s <= 4 ? 81 : s <= 8 ? 121 : 161;
+    const bar = (p) => { $("bar").style.width = Math.round(p * 100) + "%"; };
 
-    document.querySelectorAll("nav [data-tab]").forEach((b) => {
+    document.querySelectorAll("[data-view]").forEach((b) => {
       b.onclick = () => {
-        document.querySelectorAll("nav [data-tab]").forEach((x) => x.classList.toggle("on", x === b));
-        ["gen","player","lib","chat"].forEach((t) => $("tab-" + t).classList.toggle("hide", t !== b.dataset.tab));
-        if (b.dataset.tab === "lib") renderJobs();
+        document.querySelectorAll("[data-view]").forEach((x) => x.classList.toggle("on", x === b));
+        ["board","stage","lib","agent"].forEach((v) => {
+          const el = $("view-" + v);
+          if (!el) return;
+          const show = v === b.dataset.view || (b.dataset.view === "board" && v === "stage");
+          el.classList.toggle("hide", !show && !(b.dataset.view === "board" && v === "stage"));
+          if (b.dataset.view === "lib") { $("view-board").classList.add("hide"); $("view-stage").classList.add("hide"); }
+          if (b.dataset.view === "agent") { $("view-board").classList.add("hide"); $("view-stage").classList.add("hide"); }
+          if (b.dataset.view === "stage") $("view-board").classList.add("hide");
+          if (b.dataset.view === "board") { $("view-board").classList.remove("hide"); $("view-stage").classList.remove("hide"); }
+        });
+        if (b.dataset.view === "lib") renderLib();
       };
     });
-    document.querySelectorAll("[data-group]").forEach((b) => {
-      b.onclick = () => {
-        group = b.dataset.group;
-        document.querySelectorAll("[data-group]").forEach((x) => x.classList.toggle("on", x === b));
-        kind = MODES[group][0][0];
-        paintModes();
-      };
-    });
+
     function paintModes() {
       $("modes").innerHTML = "";
-      MODES[group].forEach(([id, lab]) => {
+      MAP[group].forEach(([id, lab]) => {
         const btn = document.createElement("button");
         btn.type = "button"; btn.className = "chip" + (kind === id ? " on" : "");
         btn.textContent = lab;
@@ -201,14 +223,20 @@
         $("modes").appendChild(btn);
       });
     }
+    document.querySelectorAll("[data-g]").forEach((b) => {
+      b.onclick = () => {
+        group = b.dataset.g;
+        document.querySelectorAll("[data-g]").forEach((x) => x.classList.toggle("on", x === b));
+        kind = MAP[group][0][0];
+        paintModes();
+      };
+    });
     paintModes();
-    document.querySelectorAll("[data-group]").forEach((x) => x.classList.toggle("on", x.dataset.group === "video"));
-
     $("cSerana").onclick = () => $("cSerana").classList.toggle("on");
     $("cDanny").onclick = () => $("cDanny").classList.toggle("on");
     $("dur").oninput = () => {
       const s = Number($("dur").value);
-      $("durLab").textContent = s + "s → " + frames(s) + " frames";
+      $("durLab").textContent = s + "s · " + frames(s) + " frames";
     };
     $("file").onchange = () => {
       const f = $("file").files[0];
@@ -218,39 +246,39 @@
       r.readAsDataURL(f);
     };
 
-    async function ready() {
+    async function ping() {
       try {
-        const s = await j("/api/studio");
-        if (s.hasApiKey) { $("status").textContent = "G2P Forge · WAN ready · no xAI"; $("status").className = "ok"; }
-        else { $("status").textContent = "Studio up · set RUNPOD_API_KEY then restart"; $("status").className = "bad"; }
-      } catch { $("status").textContent = "Start the cluster"; $("status").className = "bad"; }
+        const s = await api("/api/studio");
+        if (s.hasApiKey) { $("ready").textContent = "WAN online · Agent G2P · no xAI"; $("ready").className = "ok"; }
+        else { $("ready").textContent = "Studio up · set RUNPOD_API_KEY then restart cluster"; $("ready").className = "bad"; }
+      } catch { $("ready").textContent = "Cluster offline"; $("ready").className = "bad"; }
     }
 
-    function renderJobs() {
-      const list = jobs();
-      $("jobs").innerHTML = list.length ? "" : "<p class='hint'>Empty.</p>";
-      list.slice().reverse().forEach((item) => {
+    function renderLib() {
+      const items = list();
+      $("jobs").innerHTML = items.length ? "" : "<p class='sub'>Empty.</p>";
+      items.slice().reverse().forEach((it) => {
         const d = document.createElement("div");
         d.className = "job";
-        d.innerHTML = "<strong>" + (item.kind || "job") + "</strong> · " + (item.status || "?") +
-          "<div>" + (item.prompt || "").slice(0, 140) + "</div>" +
-          (item.jobId ? "<div>id " + item.jobId + "</div>" : "") +
-          (item.video ? "<button type='button' class='link' data-url='" + item.video + "'>play</button>" : "");
-        const b = d.querySelector("[data-url]");
-        if (b) b.onclick = () => { $("playUrl").value = b.dataset.url; $("player2").src = b.dataset.url; document.querySelector("[data-tab=player]").click(); };
+        d.innerHTML = "<strong>" + (it.kind || "") + "</strong> · " + (it.status || "") +
+          "<div>" + (it.prompt || "").slice(0, 160) + "</div>" +
+          (it.video ? "<button type='button' data-u>Play</button>" : "");
+        const b = d.querySelector("[data-u]");
+        if (b) b.onclick = () => show(it.video);
         $("jobs").appendChild(d);
       });
     }
 
-    function showMedia(url) {
+    function show(url) {
       if (!url) return;
-      const still = (kind === "still" || kind === "i2i" || kind === "v2i") && !/\.mp4|\.webm|video\//i.test(url);
-      if (still) { $("still").src = url; $("still").classList.remove("hide"); $("player").classList.add("hide"); }
-      else { $("player").src = url; $("player").classList.remove("hide"); $("still").classList.add("hide"); }
-      $("playUrl").value = url; $("player2").src = url;
+      const img = (kind === "still" || kind === "i2i" || kind === "v2i") && !/mp4|webm|video\//i.test(url);
+      $("still").classList.toggle("hide", !img);
+      $("player").classList.toggle("hide", img);
+      if (img) $("still").src = url; else $("player").src = url;
+      $("playUrl").value = url;
     }
 
-    function fullPrompt() {
+    function promptText() {
       let t = $("prompt").value.trim();
       if ($("cSerana").classList.contains("on") && !/serana/i.test(t)) t = "Serana. " + t;
       if ($("cDanny").classList.contains("on") && !/danny/i.test(t)) t = "Danny. " + t;
@@ -258,21 +286,20 @@
     }
 
     async function generate(planOnly) {
-      const text = fullPrompt();
-      if (!text) { $("log").textContent = "Enter a prompt."; return; }
+      const text = promptText();
+      if (!text) { $("log").textContent = "Enter a direction."; return; }
       if (kind === "t2t" || kind === "i2t" || kind === "v2t") {
         $("log").textContent = "Agent…";
-        const r = await j("/api/pipeline", {
+        const r = await api("/api/pipeline", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text, verify: false, autoVideo: false }),
         });
         $("log").textContent = r.content || JSON.stringify(r);
         return;
       }
-      $("go").disabled = true; setBar(0.08); $("log").textContent = planOnly ? "Planning…" : "Submitting WAN 2.2…";
+      $("go").disabled = true; bar(0.1); $("log").textContent = planOnly ? "Director…" : "Submitting WAN 2.2…";
       const body = {
-        text,
-        kind: kind === "i2i" || kind === "v2i" ? "still" : kind,
+        text, kind: (kind === "i2i" || kind === "v2i") ? "still" : kind,
         imageUrl: $("imageUrl").value.trim() || undefined,
         imageBase64: imageB64 || undefined,
         videoUrl: $("videoUrl").value.trim() || undefined,
@@ -283,54 +310,50 @@
         negativePrompt: $("neg").value.trim() || undefined,
       };
       try {
-        const r = await j(planOnly ? "/api/video-plan" : "/api/video", {
+        const r = await api(planOnly ? "/api/video-plan" : "/api/video", {
           method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
         });
-        if (r.ok === false) { $("log").textContent = "Error: " + (r.error || r.reason || JSON.stringify(r)); setBar(0); }
+        if (r.ok === false) { $("log").textContent = r.error || r.reason || JSON.stringify(r); bar(0); }
         else if (r.submitted) {
-          currentId = r.jobId; setBar(0.25);
-          $("jobMeta").textContent = "Job " + r.jobId + " · " + (r.status || "IN_QUEUE");
-          $("log").textContent = (r.plan && r.plan.directedPrompt) || "Submitted.";
-          const all = jobs();
-          all.push({ jobId: r.jobId, status: r.status, prompt: text, kind, ts: Date.now() });
-          saveJobs(all);
+          currentId = r.jobId; bar(0.28);
+          $("jobMeta").textContent = (r.status || "IN_QUEUE") + " · " + r.jobId;
+          $("log").textContent = (r.plan && r.plan.directedPrompt) || "Queued.";
+          save(list().concat([{ jobId: r.jobId, status: r.status, prompt: text, kind, ts: Date.now() }]));
           poll();
         } else {
-          setBar(0.15);
-          $("log").textContent = (r.message || "Plan") + "\n\n" + ((r.plan && r.plan.directedPrompt) || r.directedPrompt || "");
-          $("jobMeta").textContent = r.submitted === false ? "Plan only — GPU key not on backends" : "Plan";
+          bar(0.12);
+          $("jobMeta").textContent = "Plan only";
+          $("log").textContent = (r.message || "") + "\n\n" + ((r.plan && r.plan.directedPrompt) || "");
         }
       } catch (e) { $("log").textContent = String(e); }
       $("go").disabled = false;
     }
 
     async function poll() {
-      if (!currentId) { $("jobMeta").textContent = "No job id."; return; }
-      const r = await j("/api/video/status?id=" + encodeURIComponent(currentId));
+      if (!currentId) return;
+      const r = await api("/api/video/status?id=" + encodeURIComponent(currentId));
       $("jobMeta").textContent = (r.status || "?") + " · " + currentId;
-      const all = jobs().map((x) => x.jobId === currentId ? { ...x, status: r.status, video: r.video } : x);
-      saveJobs(all);
-      if (r.status === "IN_QUEUE") setBar(0.35);
-      if (r.status === "IN_PROGRESS") setBar(0.65);
-      if (r.video) { showMedia(r.video); setBar(1); }
+      save(list().map((x) => x.jobId === currentId ? { ...x, status: r.status, video: r.video } : x));
+      if (r.status === "IN_QUEUE") bar(0.4);
+      if (r.status === "IN_PROGRESS") bar(0.7);
+      if (r.video) { show(r.video); bar(1); }
       if (r.status === "IN_QUEUE" || r.status === "IN_PROGRESS") setTimeout(poll, 4000);
     }
 
     $("go").onclick = () => generate(false);
-    $("planOnly").onclick = () => generate(true);
+    $("plan").onclick = () => generate(true);
     $("poll").onclick = poll;
-    $("toPlayer").onclick = () => document.querySelector("[data-tab=player]").click();
-    $("loadPlay").onclick = () => { const u = $("playUrl").value.trim(); if (u) $("player2").src = u; };
+    $("loadPlay").onclick = () => { const u = $("playUrl").value.trim(); if (u) show(u); };
     $("ask").onclick = async () => {
       const text = $("q").value.trim(); if (!text) return;
       $("ans").textContent = "Thinking…";
-      const r = await j("/api/pipeline", {
+      const r = await api("/api/pipeline", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, verify: $("verify").checked, autoVideo: false }),
       });
       $("ans").textContent = r.content || JSON.stringify(r, null, 2);
     };
-    ready(); setInterval(ready, 12000);
+    ping(); setInterval(ping, 12000);
   </script>
 </body>
 </html>

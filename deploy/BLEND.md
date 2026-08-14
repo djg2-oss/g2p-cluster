@@ -1,21 +1,10 @@
-# G2P Forge = best of AetherForge + G2P Cluster
+# G2P Studio (the one product)
 
-## Kept from AetherForge (real improvement)
-- WAN 2.2 TI2V payload: `image_base64`, `image_url`, `seed`, duration → 81/121/161 frames
-- Extract video from URL **or** base64 output
-- Studio modes: T2T / I2T / V2T / still / I2I / V2I / T2V / I2V / extend
-- File upload, duration slider, progress, library
+Not AetherForge. Not Grok. **Agent G2P’s studio.**
 
-## Kept from G2P Cluster
-- Dual-engine agent (draft → critic → edit + verify)
-- Video director (presets, camera, adult 18+ gate, no-minors)
-- Independent of xAI
-- 2BE + 2FE cluster
+Took the AetherForge generate floor (modes, upload, duration→WAN frames, library, I2V payload) and the G2P brain (director, dual-engine agent, adult 18+ / no-minors, no xAI).
 
-## Left out (not real improvement)
-- xAI Imagine / Grok text as the brain
-- Fake canvas “local MP4” with lower-third branding
-- Forced Serana+Danny composite on every image
-- Fake paywall unlock
+Left out: xAI, fake local MP4, forced Serana composite.
 
-Character chips are **optional**. WAN still runs without them.
+Folder on your PC: `C:\Users\Djg2\Downloads\g2p-cluster`
+Repo: https://github.com/djg2-oss/g2p-cluster

@@ -332,7 +332,7 @@ export async function runVideoJob(userText, opts = {}) {
 export function studioReady() {
   return {
     ok: true,
-    studio: "g2p-forge",
+    studio: "g2p-studio",
     endpoint: DEFAULT_VIDEO_ENDPOINT_ID,
     hasApiKey: Boolean(process.env.RUNPOD_API_KEY?.trim()),
     mode: process.env.RUNPOD_VIDEO_MODE || DEFAULT_VIDEO_MODE,
