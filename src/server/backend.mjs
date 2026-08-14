@@ -25,6 +25,7 @@ import {
   queueSnapshot,
   STUDIO_RUN_VERSION,
 } from "../../deploy/engines/studio-run.mjs";
+import { compareG2PX, G2PX_VERSION } from "../../deploy/engines/g2p-x-compare.mjs";
 
 const PORT = Number(process.env.PORT || 3001);
 const HOST_ID = process.env.HOST_ID || `be-${PORT}`;
@@ -660,6 +661,15 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === "/api/studio/queue" && req.method === "GET") {
     return json(res, 200, { host: HOST_ID, ...queueSnapshot() });
+  }
+
+  if (
+    (url.pathname === "/api/g2p-x/compare" || url.pathname === "/api/compare") &&
+    req.method === "POST"
+  ) {
+    const body = await readJsonBody(req);
+    const out = compareG2PX(body);
+    return json(res, out.ok === false ? 400 : 200, { host: HOST_ID, g2px: G2PX_VERSION, ...out });
   }
 
   if (url.pathname === "/api/bake") {
