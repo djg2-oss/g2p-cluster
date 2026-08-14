@@ -16,6 +16,8 @@ import {
   runVideoJob,
   isVideoIntent,
   DIRECTOR_VERSION,
+  pollVideoJob,
+  studioReady,
 } from "../../deploy/engines/video-director.mjs";
 
 const PORT = Number(process.env.PORT || 3001);
@@ -603,9 +605,35 @@ const server = http.createServer(async (req, res) => {
     const out = await runVideoJob(text, {
       hasImage: !!(body.imageUrl || body.image_url),
       imageUrl: body.imageUrl || body.image_url,
+      videoUrl: body.videoUrl || body.video_url,
       draft: body.draft === true,
+      adult: body.adult === true,
+      kind: body.kind || body.mode,
+      forcePreset: body.preset,
+      width: body.width,
+      height: body.height,
+      length: body.length,
+      steps: body.steps,
+      cfg: body.cfg,
     });
     return json(res, out.ok === false ? 400 : 200, { host: HOST_ID, ...out });
+  }
+
+  if (
+    (url.pathname === "/api/video/status" || url.pathname === "/api/video-status") &&
+    (req.method === "GET" || req.method === "POST")
+  ) {
+    let jobId = url.searchParams.get("id") || url.searchParams.get("jobId") || "";
+    if (req.method === "POST") {
+      const body = await readJsonBody(req);
+      jobId = String(body.jobId || body.id || jobId);
+    }
+    const out = await pollVideoJob(jobId);
+    return json(res, out.ok === false ? 400 : 200, { host: HOST_ID, ...out });
+  }
+
+  if (url.pathname === "/api/studio" && req.method === "GET") {
+    return json(res, 200, { host: HOST_ID, director: DIRECTOR_VERSION, ...studioReady() });
   }
 
   if (url.pathname === "/api/bake") {

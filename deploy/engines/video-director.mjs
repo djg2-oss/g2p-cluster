@@ -114,19 +114,28 @@ export function planVideo(userText, opts = {}) {
   const core = stripNoise(original) || original;
   const preset = opts.forcePreset || detectPreset(original);
   const draft = opts.draft ?? /\b(draft|quick|preview)\b/i.test(original);
+  const kind = opts.kind || "t2v";
   const cfg = PRESETS[preset] || PRESETS.cinematic;
 
   let cam = "smooth intentional camera motion";
-  if (/\b(dolly|push in)\b/i.test(original)) cam = "slow dolly-in";
+  if (kind === "still") cam = "locked tripod, single still frame, no motion";
+  else if (kind === "extend") cam = "seamless continuation of prior motion";
+  else if (/\b(dolly|push in)\b/i.test(original)) cam = "slow dolly-in";
   else if (/\b(orbit|circle|circl)\b/i.test(original)) cam = "orbiting camera circling subject";
   else if (/\b(pan|pans)\b/i.test(original)) cam = "cinematic pan in and out";
 
   const light = /\b(sunset|sunrise|golden)\b/i.test(original)
     ? "golden-hour warm light"
     : "motivated cinematic lighting";
+  const adult = opts.adult === true;
   const enriched =
-    preset === "raw" ? core : `${core}. Camera: ${cam}. Light: ${light}.`;
+    preset === "raw"
+      ? core
+      : `${core}. Camera: ${cam}. Light: ${light}.${adult ? " Adult 18+ allowed as requested." : ""}`;
   const directedPrompt = cfg.wrap(enriched);
+  const negative = adult
+    ? "child, minor, underage, blurry, watermark, text overlay, extra limbs, flicker, deformed"
+    : process.env.RUNPOD_NEGATIVE || cfg.negative;
 
   let lora;
   try {
@@ -139,15 +148,26 @@ export function planVideo(userText, opts = {}) {
     ok: true,
     original,
     directedPrompt,
-    negativePrompt: process.env.RUNPOD_NEGATIVE || cfg.negative,
+    negativePrompt: negative,
     preset,
-    mode: opts.hasImage || opts.imageUrl ? "i2v" : "t2v",
-    needsImage: !!(opts.hasImage || opts.imageUrl),
-    width: draft ? Math.min(cfg.width, 640) : cfg.width,
-    height: draft ? Math.min(cfg.height, 640) : cfg.height,
-    length: draft ? Math.min(cfg.length, 49) : cfg.length,
-    steps: draft ? Math.max(6, cfg.steps - 4) : cfg.steps,
-    cfg: cfg.cfg,
+    mode:
+      kind === "still"
+        ? "still"
+        : kind === "extend"
+          ? "extend"
+          : opts.hasImage || opts.imageUrl
+            ? "i2v"
+            : "t2v",
+    needsImage: !!(opts.hasImage || opts.imageUrl || kind === "i2v" || kind === "extend"),
+    width: Number(opts.width) || (draft ? Math.min(cfg.width, 640) : cfg.width),
+    height: Number(opts.height) || (draft ? Math.min(cfg.height, 640) : cfg.height),
+    length:
+      Number(opts.length) ||
+      (kind === "still" ? 17 : draft ? Math.min(cfg.length, 49) : cfg.length),
+    steps: Number(opts.steps) || (draft ? Math.max(6, cfg.steps - 4) : cfg.steps),
+    cfg: Number(opts.cfg) || cfg.cfg,
+    kind,
+    adult: !!opts.adult,
     loraPairs: lora,
     draft,
     notes: [
@@ -253,6 +273,10 @@ export async function runVideoJob(userText, opts = {}) {
     input.loras = plan.loraPairs;
   }
   if (opts.imageUrl) input.image_url = opts.imageUrl;
+  if (opts.videoUrl) {
+    input.video_url = opts.videoUrl;
+    input.start_image = opts.imageUrl;
+  }
 
   try {
     const runRes = await fetch(`${base}/${path}`, {
@@ -285,3 +309,49 @@ export async function runVideoJob(userText, opts = {}) {
     return { ok: false, plan, error: e instanceof Error ? e.message : String(e) };
   }
 }
+
+export function studioReady() {
+  return {
+    ok: true,
+    studio: "g2p-forge",
+    endpoint: DEFAULT_VIDEO_ENDPOINT_ID,
+    hasApiKey: Boolean(process.env.RUNPOD_API_KEY?.trim()),
+    mode: process.env.RUNPOD_VIDEO_MODE || DEFAULT_VIDEO_MODE,
+    xaiRequired: false,
+  };
+}
+
+function extractVideoRef(data) {
+  if (!data || typeof data !== "object") return undefined;
+  for (const key of ["video_url", "url", "video", "mp4", "result"]) {
+    if (typeof data[key] === "string" && data[key].length > 8) return data[key];
+  }
+  if (typeof data.output === "string" && data.output.length > 8) return data.output;
+  if (data.output && typeof data.output === "object") return extractVideoRef(data.output);
+  return undefined;
+}
+
+export async function pollVideoJob(jobId) {
+  const apiKey = process.env.RUNPOD_API_KEY?.trim();
+  const epRaw =
+    process.env.RUNPOD_VIDEO_ENDPOINT_ID?.trim() || DEFAULT_VIDEO_ENDPOINT_ID;
+  if (!apiKey) return { ok: false, error: "RUNPOD_API_KEY missing on backend" };
+  if (!jobId) return { ok: false, error: "jobId required" };
+  const { id } = normalizeEndpoint(epRaw);
+  try {
+    const st = await fetch(`https://api.runpod.ai/v2/${id}/status/${jobId}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    const sj = await st.json().catch(() => ({}));
+    return {
+      ok: st.ok,
+      jobId,
+      status: sj.status || "UNKNOWN",
+      video: extractVideoRef(sj),
+      raw: sj,
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
