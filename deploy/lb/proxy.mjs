@@ -9,7 +9,7 @@ const agent = new http.Agent({
   keepAlive: true,
   maxSockets: 64,
   maxFreeSockets: 16,
-  timeout: 5000,
+  timeout: 120000,
 });
 
 const PORT = Number(process.env.LB_PORT || 8080);
@@ -46,7 +46,7 @@ function proxy(req, res, targetBase) {
     method: req.method,
     headers,
     agent,
-    timeout: 5000,
+    timeout: 120000,
   };
   const upstream = http.request(opts, (up) => {
     res.writeHead(up.statusCode || 502, {
