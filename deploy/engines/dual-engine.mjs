@@ -12,7 +12,7 @@
  *   Engines: Engine-D (draft) then Engine-R (refine) — series, different roles.
  */
 
-export const ENGINE_VERSION = "g2p-dual-v2.2";
+export const ENGINE_VERSION = "g2p-dual-v2.3";
 
 /** Structured rubric — each 0..1 */
 export function critique(text, draft, winner) {
@@ -341,25 +341,10 @@ export async function runSequentialPipeline({
   route,
   peerRefine,
 }) {
-  const draft = buildDraft({ host, text, route });
-  // If draft already excellent and math solved, micro-refine local only
-  if (draft.critique?.quality >= 0.9 && draft.solved && !peerRefine) {
-    return {
-      ok: true,
-      mode: "micro-draft-final",
-      topology: "single-host-fast",
-      draftHost: host,
-      refineHost: host,
-      winner: draft.winner,
-      confidence: "high",
-      content: draft.content.replace("[DRAFT", "[FINAL"),
-      holes: [],
-      quality: draft.critique.quality,
-      draftPreview: draft.content.slice(0, 200),
-      engine: ENGINE_VERSION,
-      note: "High-confidence solved draft — skipped peer hop.",
-    };
-  }
+  const draftA = buildDraft({ host, text, route });
+  const draftB = buildDraft({ host, text, route: altRoute(route) });
+  const picked = pickBetterDraft(draftA, draftB);
+  const draft = picked.draft;
 
   let refined;
   if (typeof peerRefine === "function") {
@@ -368,12 +353,15 @@ export async function runSequentialPipeline({
     refined = buildRefine({ host, text, draftPayload: draft });
   }
 
-  // Extra critic only when weak — no added wait on already-good answers
-  const final = strengthenIfWeak({ host, text, draft, refined });
+  let final = strengthenIfWeak({ host, text, draft, refined, floor: 0.75 });
+  if ((final.critique?.quality ?? final.quality ?? 0) < 0.7 && !final.blocked) {
+    final = strengthenIfWeak({ host, text, draft, refined: final, floor: 0.7 });
+    final.triplePass = true;
+  }
 
   return {
     ok: true,
-    mode: "sequential-draft-critic-edit",
+    mode: "accurate-dual-draft-critic",
     topology: "dual-be-pipeline",
     draftHost: draft.host,
     refineHost: final.host,
@@ -385,21 +373,37 @@ export async function runSequentialPipeline({
     rubric: final.critique?.scores,
     draftPreview: draft.content.slice(0, 280),
     draftQuality: draft.critique?.quality,
+    altQuality: picked.alt.critique?.quality,
+    pickedDraft: picked.picked,
     peerError: final.peerError,
     fallback: final.fallback,
     doublePass: final.doublePass || false,
     extraLoop: !!final.extraLoop,
+    triplePass: !!final.triplePass,
     engine: ENGINE_VERSION,
-    note: final.extraLoop
-      ? "Extra critic on a weak pass only — strong answers stay fast."
-      : "Series: Engine-D draft -> Engine-R critic/edit (quality > parallel speed).",
+    note: "Accuracy mode: 3-way route, two drafts keep-better, refine, extra critic if weak. A little slower on purpose.",
   };
 }
 
-/** Only runs when quality < 0.75. Strong answers unchanged (no extra latency). */
-export function strengthenIfWeak({ host, text, draft, refined }) {
+function altRoute(route) {
+  const w = route?.winner;
+  const others = [route?.builds?.B?.winner, route?.builds?.C?.winner, "companion", "life"].filter(
+    (x) => x && x !== w,
+  );
+  if (!others.length) return route;
+  return { ...route, winner: others[0], confidence: "medium" };
+}
+
+export function pickBetterDraft(a, b) {
+  const qa = a.critique?.quality ?? 0;
+  const qb = b.critique?.quality ?? 0;
+  return qa >= qb ? { draft: a, alt: b, picked: "A" } : { draft: b, alt: a, picked: "B" };
+}
+
+/** Extra critic when below floor. Strong answers skip this wait. */
+export function strengthenIfWeak({ host, text, draft, refined, floor = 0.75 }) {
   const q = refined.critique?.quality ?? refined.quality ?? 0;
-  if (refined.blocked || q >= 0.75) return { ...refined, extraLoop: false };
+  if (refined.blocked || q >= floor) return { ...refined, extraLoop: !!refined.extraLoop };
   const again = buildRefine({
     host,
     text,

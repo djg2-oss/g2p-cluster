@@ -4,7 +4,7 @@
  * Extra = optional Grok 4.5 when a key exists (appended, never replaces the floor).
  * Agent G2P stays independent (no xAI).
  */
-import { buildDraft, buildRefine, critique, simpleRoute, strengthenIfWeak } from "./dual-engine.mjs";
+import { buildDraft, buildRefine, critique, simpleRoute, strengthenIfWeak, pickBetterDraft } from "./dual-engine.mjs";
 import { directorLegalBlock } from "./video-director.mjs";
 
 export const G2PX_ENGINE = "g2p-x-full-v2";
@@ -43,9 +43,18 @@ export async function runG2PX(text) {
   if (block) return { ok: false, blocked: true, error: block, agent: "G2P-X" };
 
   const route = simpleRoute(t);
-  const draft = buildDraft({ host: "g2p-x", text: t, route });
+  const draftA = buildDraft({ host: "g2p-x", text: t, route });
+  const draftB = buildDraft({
+    host: "g2p-x",
+    text: t,
+    route: { ...route, winner: route.winner === "math" ? "companion" : "math" },
+  });
+  const draft = pickBetterDraft(draftA, draftB).draft;
   const first = buildRefine({ host: "g2p-x", text: t, draftPayload: draft });
-  const refined = strengthenIfWeak({ host: "g2p-x", text: t, draft, refined: first });
+  let refined = strengthenIfWeak({ host: "g2p-x", text: t, draft, refined: first, floor: 0.75 });
+  if ((refined.critique?.quality ?? refined.quality ?? 0) < 0.7) {
+    refined = strengthenIfWeak({ host: "g2p-x", text: t, draft, refined, floor: 0.7 });
+  }
 
   let extra = null;
   try {

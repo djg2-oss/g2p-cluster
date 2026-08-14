@@ -249,33 +249,7 @@ function metaRoute(text) {
 
   const sig = extractSignals(text);
 
-  // PERF: single-signal fast path — skip B+C ensemble
-  const flags = [
-    sig.hasMath && "math",
-    sig.hasBuild && "build",
-    sig.hasLife && "life",
-    sig.hasMedia && "phenome",
-    sig.emotion && "companion",
-  ].filter(Boolean);
-  const uniq = [...new Set(flags)];
-  if (uniq.length === 1) {
-    const winner = uniq[0];
-    const A = bayesRoute(sig);
-    const result = {
-      host: HOST_ID,
-      signal: sig,
-      builds: { A, B: A, C: A },
-      votes: { [winner]: 2.2 },
-      winner,
-      confidence: "high",
-      topology: "dual-be",
-      fastPath: true,
-    };
-    metrics.fastPaths++;
-    if (key) cacheSet(key, result);
-    return result;
-  }
-
+  // Always 3-way vote — accuracy over speed
   metrics.fullMeta++;
   const A = bayesRoute(sig);
   const B = fixedPointRoute(sig, 3);
