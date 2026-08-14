@@ -27,6 +27,7 @@ import {
 } from "../../deploy/engines/studio-run.mjs";
 import { compareG2PX, G2PX_VERSION } from "../../deploy/engines/g2p-x-compare.mjs";
 import { runG2PX, g2pxReady, G2PX_ENGINE } from "../../deploy/engines/g2p-x-engine.mjs";
+import { applyWeights, recordOutcome, getWeights } from "../../deploy/engines/learned-weights.mjs";
 
 const PORT = Number(process.env.PORT || 3001);
 const HOST_ID = process.env.HOST_ID || `be-${PORT}`;
@@ -259,7 +260,8 @@ function metaRoute(text) {
     const w = x.acc * 0.85 + 0.15;
     votes[x.winner] = (votes[x.winner] || 0) + w;
   }
-  const ranked = Object.entries(votes).sort((a, b) => b[1] - a[1]);
+  const weighted = applyWeights(votes);
+  const ranked = Object.entries(weighted).sort((a, b) => b[1] - a[1]);
   const winner = ranked[0][0];
   const conf =
     ranked[0][1] >= 1.8 ? "high" : ranked[0][1] >= 1.1 ? "medium" : "low";
@@ -268,6 +270,8 @@ function metaRoute(text) {
     signal: sig,
     builds: { A, B, C },
     votes,
+    votesWeighted: weighted,
+    learnedWeights: getWeights(),
     winner,
     confidence: conf,
     topology: "dual-be",
@@ -371,6 +375,7 @@ async function qualityPipeline(text, opts = {}) {
   out.ms = +(performance.now() - t0).toFixed(3);
   out.engine = out.engine || ENGINE_VERSION;
   out.role = ENGINE_ROLE;
+  out.learnedWeights = recordOutcome(out.winner, out.quality);
   pushSample(metrics.pipelineMs, out.ms);
   if (typeof out.quality === "number") pushSample(metrics.qualities, out.quality);
   if (!opts.noCache && out.ok !== false) pipelineCacheSet(cacheKey, out);
@@ -673,6 +678,16 @@ const server = http.createServer(async (req, res) => {
       winner: gq >= xq ? "Agent G2P" : "G2P-X",
       note: "Agent G2P = full independent dual-engine. G2P-X = same floor + optional Grok. G2P-X only increases.",
       g2pxReady: g2pxReady(),
+    });
+  }
+
+  if (url.pathname === "/api/weights" && req.method === "GET") {
+    return json(res, 200, {
+      host: HOST_ID,
+      rule: "increase-only",
+      floor: 1,
+      cap: 2.5,
+      weights: getWeights(),
     });
   }
 

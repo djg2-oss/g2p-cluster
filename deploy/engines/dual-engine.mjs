@@ -312,6 +312,9 @@ export function buildRefine({ host, text, draftPayload }) {
     ...patches,
     "",
     `Rubric: correct ${crit.scores.correctness} | complete ${crit.scores.completeness} | clear ${crit.scores.clarity} | action ${crit.scores.actionability} | safety ${crit.scores.safety}`,
+    crit.quality < 0.65
+      ? "Honest: this pass is uncertain — treat as a draft, not a finished answer."
+      : null,
     "Mode: sequential dual-engine (draft->critic->edit) - not parallel race.",
   ]
     .filter((x) => x !== null)
