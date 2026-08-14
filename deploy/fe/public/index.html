@@ -153,20 +153,33 @@
       <h1>Library</h1>
       <p class="meta" id="counts">0</p>
       <div id="jobs"></div>
-      <h1 style="margin-top:18px">Agent G2P compare</h1>
-      <p class="meta">Critic pass on this prompt vs the directed shot. Not Grok.</p>
-      <button type="button" class="ghost" id="cmpBtn">Compare</button>
+      <h1 style="margin-top:18px">Shot critic</h1>
+      <p class="meta">Prompt vs directed shot.</p>
+      <button type="button" class="ghost" id="cmpBtn">Score shot</button>
       <div id="cmp"></div>
     </aside>
 
     <section class="span" style="padding:14px">
-      <h1>Agent G2P</h1>
-      <textarea id="q" placeholder="Ask Agent G2P — math, build, life, shot notes" style="min-height:56px"></textarea>
+      <h1>Agents — both loaded</h1>
+      <p class="meta" style="margin-bottom:8px">Agent G2P = full independent. G2P-X = same floor + optional Grok (only increases). Compare both.</p>
+      <textarea id="q" placeholder="Ask both — math, build, life, shot" style="min-height:56px"></textarea>
       <div class="row" style="margin-top:8px">
-        <label class="chk"><input type="checkbox" id="verify" /> Verify</label>
-        <button type="button" class="primary" id="ask">Ask</button>
+        <label class="chk"><input type="checkbox" id="verify" /> Verify G2P</label>
+        <button type="button" class="primary" id="askBoth">Compare both</button>
+        <button type="button" class="ghost" id="askG2P">Agent G2P only</button>
+        <button type="button" class="ghost" id="askX">G2P-X only</button>
       </div>
-      <pre id="ans"></pre>
+      <div class="grid2" style="margin-top:12px">
+        <div>
+          <h1>Agent G2P · full</h1>
+          <pre id="ans"></pre>
+        </div>
+        <div>
+          <h1>G2P-X · full+</h1>
+          <pre id="ansX"></pre>
+        </div>
+      </div>
+      <p class="meta" id="whoWon"></p>
     </section>
   </div>
   <script>
@@ -363,7 +376,18 @@
       $("cmp").textContent = (r.summary || "") + "\n" + (r.notes || []).join("\n") +
         (r.quality != null ? "\nquality " + r.quality : "");
     };
-    $("ask").onclick = async () => {
+    $("askBoth").onclick = async () => {
+      const text = $("q").value.trim(); if (!text) return;
+      $("ans").textContent = "Agent G2P…"; $("ansX").textContent = "G2P-X…"; $("whoWon").textContent = "";
+      const r = await api("/api/agents/compare", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, verify: $("verify").checked }),
+      });
+      $("ans").textContent = (r.agentG2P && r.agentG2P.content) || JSON.stringify(r.agentG2P, null, 2);
+      $("ansX").textContent = (r.g2pX && r.g2pX.content) || JSON.stringify(r.g2pX, null, 2);
+      $("whoWon").textContent = (r.winner || "") + " · " + (r.note || "");
+    };
+    $("askG2P").onclick = async () => {
       const text = $("q").value.trim(); if (!text) return;
       $("ans").textContent = "Thinking…";
       const r = await api("/api/pipeline", {
@@ -371,6 +395,15 @@
         body: JSON.stringify({ text, verify: $("verify").checked, autoVideo: false }),
       });
       $("ans").textContent = r.content || JSON.stringify(r, null, 2);
+    };
+    $("askX").onclick = async () => {
+      const text = $("q").value.trim(); if (!text) return;
+      $("ansX").textContent = "Thinking…";
+      const r = await api("/api/g2p-x/ask", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      $("ansX").textContent = r.content || r.error || JSON.stringify(r, null, 2);
     };
     document.addEventListener("keydown", (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); generate(false); }

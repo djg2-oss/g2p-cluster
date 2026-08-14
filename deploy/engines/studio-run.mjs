@@ -12,14 +12,17 @@ function critiqueShot(original, directed) {
   const holes = [];
   const d = directed || "";
   const o = original || "";
-  if (!/\b(camera|orbit|pan|dolly|handheld|static|tracking|crane)\b/i.test(d)) {
+  if (!/\b(camera|orbit|pan|dolly|handheld|static|tracking|crane|tilt|zoom)\b/i.test(d)) {
     holes.push("add explicit camera move");
   }
   if (!/\b(light|lighting|key|rim|softbox|golden|neon|overcast)\b/i.test(d)) {
     holes.push("add lighting language");
   }
-  if (o.split(/\s+/).length < 6) holes.push("subject too thin — keep who/what/where");
+  if (o.split(/\s+/).filter(Boolean).length < 6) holes.push("subject too thin — keep who/what/where");
   if (!/\b(coherent|stable|consistent)\b/i.test(d)) holes.push("lock identity / coherent motion");
+  if (!/\b(environment|backdrop|interior|exterior|street|studio|room)\b/i.test(d + " " + o)) {
+    holes.push("name the environment");
+  }
   return holes;
 }
 
@@ -33,6 +36,9 @@ function editShot(directed, holes) {
   }
   if (holes.includes("lock identity / coherent motion")) {
     out += " Consistent subject, no morph, coherent motion.";
+  }
+  if (holes.includes("name the environment") && !/environment|backdrop|interior|exterior/i.test(out)) {
+    out += " Clear readable environment.";
   }
   return out;
 }

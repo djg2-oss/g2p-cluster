@@ -378,3 +378,15 @@ export async function runSequentialPipeline({
     note: "Series: Engine-D draft -> Engine-R critic/edit (quality > parallel speed).",
   };
 }
+
+/** Shared specialist guess — used by Agent G2P peers and G2P-X (never a downgrade). */
+export function simpleRoute(text) {
+  const t = String(text || "").toLowerCase();
+  let winner = "companion";
+  if (/\b(solve|equation|integral|derivative|matrix|quadratic|x\^2|algebra)\b/.test(t)) winner = "math";
+  else if (/\b(code|build|app|api|deploy|script|website|software)\b/.test(t)) winner = "build";
+  else if (/\b(video|camera|shot|prompt|serana|wan|image|clip)\b/.test(t)) winner = "phenome";
+  else if (/\b(should i|stuck|anxious|decide|life|career|relationship)\b/.test(t)) winner = "life";
+  const node = { winner, acc: 1 };
+  return { winner, confidence: "medium", builds: { A: node, B: node, C: node } };
+}

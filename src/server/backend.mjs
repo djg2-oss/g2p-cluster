@@ -26,6 +26,7 @@ import {
   STUDIO_RUN_VERSION,
 } from "../../deploy/engines/studio-run.mjs";
 import { compareG2PX, G2PX_VERSION } from "../../deploy/engines/g2p-x-compare.mjs";
+import { runG2PX, g2pxReady, G2PX_ENGINE } from "../../deploy/engines/g2p-x-engine.mjs";
 
 const PORT = Number(process.env.PORT || 3001);
 const HOST_ID = process.env.HOST_ID || `be-${PORT}`;
@@ -649,6 +650,7 @@ const server = http.createServer(async (req, res) => {
       director: DIRECTOR_VERSION,
       studioRun: STUDIO_RUN_VERSION,
       queue: queueSnapshot(),
+      g2px: g2pxReady(),
       ...studioReady(),
     });
   }
@@ -670,6 +672,34 @@ const server = http.createServer(async (req, res) => {
     const body = await readJsonBody(req);
     const out = compareG2PX(body);
     return json(res, out.ok === false ? 400 : 200, { host: HOST_ID, g2px: G2PX_VERSION, ...out });
+  }
+
+  if (url.pathname === "/api/g2p-x/ask" && req.method === "POST") {
+    const body = await readJsonBody(req);
+    const out = await runG2PX(body.text || body.prompt || "");
+    return json(res, out.ok === false ? 400 : 200, { host: HOST_ID, ...out });
+  }
+
+  if (url.pathname === "/api/agents/compare" && req.method === "POST") {
+    const body = await readJsonBody(req);
+    const text = String(body.text || body.prompt || "");
+    if (!text.trim()) return json(res, 400, { error: "text required" });
+    const [g2p, x] = await Promise.all([
+      qualityPipeline(text, { verify: body.verify === true, noCache: true }),
+      runG2PX(text),
+    ]);
+    const gq = Number(g2p.quality || 0);
+    const xq = Number(x.quality || 0);
+    return json(res, 200, {
+      host: HOST_ID,
+      ok: true,
+      text,
+      agentG2P: { weight: "full", ...g2p },
+      g2pX: x,
+      winner: gq >= xq ? "Agent G2P" : "G2P-X",
+      note: "Agent G2P = full independent dual-engine. G2P-X = same floor + optional Grok. G2P-X only increases.",
+      g2pxReady: g2pxReady(),
+    });
   }
 
   if (url.pathname === "/api/bake") {
