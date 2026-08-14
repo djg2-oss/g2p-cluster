@@ -6,73 +6,55 @@
   <title>G2P Studio</title>
   <style>
     :root {
-      --bg: #070707;
-      --elev: #101010;
-      --panel: #141414;
-      --fg: #f2eee6;
-      --muted: #9a9183;
-      --line: color-mix(in oklab, #f2eee6 12%, transparent);
-      --gold: #c4a35a;
-      --gold-ink: #120e04;
-      --danger: #c45c4a;
-      --ok: #7d9a6a;
-      --r-sm: 8px; --r-md: 12px; --r-lg: 20px;
-      --font: "Segoe UI", system-ui, sans-serif;
-      --mono: ui-monospace, Consolas, monospace;
+      --bg: #080808; --elev: #111; --panel: #161616; --fg: #f3efe6; --muted: #9a9183;
+      --line: #2a261c; --gold: #c4a35a; --ink: #120e04; --ok: #7d9a6a; --bad: #c45c4a;
+      --r: 16px; --font: "Segoe UI", system-ui, sans-serif; --mono: ui-monospace, Consolas, monospace;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100dvh; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--font); }
-    button, [role=button] { cursor: pointer; font: inherit; }
+    html, body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--font); }
+    button { font: inherit; cursor: pointer; }
     button:disabled { opacity: .5; cursor: wait; }
     header {
-      display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
-      padding: 12px 16px; border-bottom: 1px solid var(--line); background: #050505;
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-bottom: 1px solid var(--line); background: #050505; position: sticky; top: 0; z-index: 5;
     }
-    .mark { font-weight: 650; letter-spacing: .14em; font-size: 13px; color: var(--gold); }
+    .mark { letter-spacing: .16em; font-size: 12px; font-weight: 700; color: var(--gold); }
     #ready { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-    #ready.ok { color: var(--ok); } #ready.bad { color: var(--danger); }
-    .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
-    .tabs button, .chip {
-      min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line);
-      background: transparent; color: var(--muted);
+    #ready.ok { color: var(--ok); } #ready.bad { color: var(--bad); }
+    .app { max-width: 1280px; margin: 0 auto; padding: 12px; display: grid; gap: 12px; }
+    @media (min-width: 1024px) {
+      .app { grid-template-columns: 1.08fr .92fr; }
+      .span2 { grid-column: 1 / -1; }
     }
-    .tabs button.on, .chip.on { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); font-weight: 600; }
-    .app {
-      display: grid; gap: 12px; padding: 12px; max-width: 1280px; margin: 0 auto;
-    }
-    @media (min-width: 980px) {
-      .app { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); align-items: start; }
-    }
-    .card {
-      background: var(--elev); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px;
-    }
-    h1 { margin: 0 0 4px; font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
-    .sub { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
-    label { display: block; margin: 12px 0 6px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+    .card { background: var(--elev); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; }
+    h1, h2 { margin: 0 0 4px; font-weight: 650; letter-spacing: -.02em; }
+    h1 { font-size: 20px; } h2 { font-size: 14px; }
+    .sub { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+    label { display: block; margin: 10px 0 5px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
     textarea, input, select {
       width: 100%; background: #0a0a0a; color: var(--fg); border: 1px solid var(--line);
-      border-radius: var(--r-sm); padding: 10px 12px; font: inherit;
+      border-radius: 8px; padding: 10px 12px; font: inherit;
     }
-    textarea { min-height: 96px; resize: vertical; }
+    textarea { min-height: 88px; resize: vertical; }
     .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .primary {
-      min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px;
-      background: var(--gold); color: var(--gold-ink); font-weight: 650;
+    .chip, .ghost {
+      min-height: 40px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line);
+      background: transparent; color: var(--muted);
     }
-    .ghost {
-      min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line);
-      background: transparent; color: var(--fg);
-    }
+    .chip.on, .primary { background: var(--gold); color: var(--ink); border-color: var(--gold); font-weight: 650; }
+    .primary { min-height: 44px; padding: 0 18px; border-radius: 999px; border: 0; }
+    .ghost { color: var(--fg); }
     .bar { height: 4px; background: #1c1a16; border-radius: 99px; overflow: hidden; margin-top: 10px; }
-    .bar > i { display: block; height: 100%; width: 0; background: var(--gold); transition: width 250ms ease; }
-    video, .still { width: 100%; max-height: 460px; border-radius: var(--r-md); background: #000; }
-    .hide { display: none !important; }
-    .job { padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
-    .job button { background: none; border: 0; color: var(--gold); padding: 0; min-height: 0; }
-    .meta { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-    #log, #ans { white-space: pre-wrap; font-size: 13px; color: #d8cbb4; max-height: 200px; overflow: auto; }
+    .bar > i { display: block; height: 100%; width: 0; background: var(--gold); }
+    video, .still, canvas.edit { width: 100%; max-height: 380px; border-radius: 12px; background: #000; }
+    .lib { max-height: 240px; overflow: auto; border-top: 1px solid var(--line); margin-top: 10px; }
+    .job { display: flex; gap: 8px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+    .job button { background: none; border: 0; color: var(--gold); padding: 0; }
+    .meta { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    #log, #ans { white-space: pre-wrap; font-size: 13px; color: #d8cbb4; max-height: 160px; overflow: auto; }
     .chk { display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--muted); font-weight: 500; }
+    .mem { font-size: 12px; color: var(--muted); padding: 6px 0; border-top: 1px solid var(--line); }
     @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -82,19 +64,14 @@
       <div class="mark">G2P STUDIO</div>
       <div id="ready">Checking engines…</div>
     </div>
-    <nav class="tabs">
-      <button type="button" class="on" data-view="board">Board</button>
-      <button type="button" data-view="stage">Stage</button>
-      <button type="button" data-view="lib">Library</button>
-      <button type="button" data-view="agent">Agent</button>
-    </nav>
+    <div class="row">
+      <span class="meta" id="counts">0 in library</span>
+    </div>
   </header>
-
   <main class="app">
-    <section class="card" id="view-board">
+    <section class="card">
       <h1>Generate</h1>
-      <p class="sub">AetherForge floor + G2P director. Agent G2P is independent — not Grok, not xAI. WAN 2.2 on RunPod.</p>
-
+      <p class="sub">Nine modes. WAN 2.2 TI2V. G2P director. Optional cast. Not Grok. Not xAI.</p>
       <div class="row" id="groups">
         <button type="button" class="chip" data-g="text">Text</button>
         <button type="button" class="chip" data-g="image">Image</button>
@@ -104,19 +81,16 @@
       <div class="row" style="margin-top:8px">
         <button type="button" class="chip" id="cSerana">Serana</button>
         <button type="button" class="chip" id="cDanny">Danny</button>
-        <span class="sub" style="margin:0">Optional cast. Off = your prompt only.</span>
+        <span class="sub" style="margin:0">Optional. Off = prompt only.</span>
       </div>
-
-      <label for="prompt">Direction</label>
-      <textarea id="prompt" placeholder="Orbiting character walk, cinematic, coherent motion"></textarea>
-      <label for="neg">Avoid</label>
-      <textarea id="neg" style="min-height:56px" placeholder="blur, watermark, extra limbs"></textarea>
-
-      <label>Source still or clip</label>
-      <input type="url" id="imageUrl" placeholder="https://… image URL" />
+      <label>Direction</label>
+      <textarea id="prompt" placeholder="Orbiting walk, cinematic, coherent motion"></textarea>
+      <label>Avoid</label>
+      <textarea id="neg" style="min-height:52px" placeholder="blur, watermark, extra limbs"></textarea>
+      <label>Source still / clip</label>
+      <input type="url" id="imageUrl" placeholder="Image URL" />
       <input type="file" id="file" accept="image/*,video/*" style="margin-top:8px" />
-      <input type="url" id="videoUrl" placeholder="https://… video URL for extend" style="margin-top:8px" />
-
+      <input type="url" id="videoUrl" placeholder="Video URL to extend" style="margin-top:8px" />
       <div class="grid2">
         <div>
           <label>Preset</label>
@@ -126,7 +100,7 @@
             <option value="cinematic">Cinematic</option>
             <option value="handheld">Handheld</option>
             <option value="trailer">Trailer</option>
-            <option value="raw">Raw prompt</option>
+            <option value="raw">Raw</option>
           </select>
         </div>
         <div>
@@ -137,110 +111,94 @@
       <label>Length <span id="durLab" class="meta">4s · 81 frames</span></label>
       <input type="range" id="dur" min="2" max="14" value="4" />
       <label class="chk"><input type="checkbox" id="adult" /> Adult 18+ (never minors)</label>
-
-      <div class="row" style="margin-top:14px">
+      <div class="row" style="margin-top:12px">
         <button type="button" class="primary" id="go">Generate</button>
         <button type="button" class="ghost" id="plan">Director plan</button>
+        <button type="button" class="ghost" id="queueBtn">Add to queue</button>
       </div>
       <div class="bar"><i id="bar"></i></div>
       <p class="meta" id="jobMeta">Idle</p>
       <div id="log"></div>
     </section>
 
-    <section class="card" id="view-stage">
-      <h1>Stage</h1>
-      <p class="sub">Completed stills and clips play here. Queue auto-polls WAN.</p>
-      <video id="player" controls playsinline class="hide"></video>
-      <img id="still" class="still hide" alt="" />
-      <div class="row" style="margin-top:10px">
-        <input type="url" id="playUrl" placeholder="Paste a finished URL" />
-        <button type="button" class="ghost" id="loadPlay">Load</button>
+    <section class="card">
+      <h1>Stage + library</h1>
+      <p class="sub">Preview, download, edit stills. Jobs persist in this browser.</p>
+      <video id="player" controls playsinline class="still" style="display:none"></video>
+      <img id="still" class="still" alt="" style="display:none" />
+      <canvas id="edit" class="edit" style="display:none"></canvas>
+      <div class="row" style="margin-top:8px">
+        <button type="button" class="ghost" id="dl">Download</button>
         <button type="button" class="ghost" id="poll">Refresh job</button>
       </div>
+      <div class="grid2" id="editRow" style="display:none;margin-top:8px">
+        <div><label>Bright <input type="range" id="br" min="-40" max="40" value="0" /></label></div>
+        <div><label>Contrast <input type="range" id="ct" min="-40" max="40" value="0" /></label></div>
+      </div>
+      <div class="lib" id="jobs"></div>
     </section>
 
-    <section class="card hide" id="view-lib">
-      <h1>Library</h1>
-      <p class="sub">Local queue. Click play when a job completes.</p>
-      <div id="jobs"></div>
+    <section class="card span2">
+      <h2>Memory</h2>
+      <p class="sub">Iconic / echoic / episodic — grouped the way G2P stores a run.</p>
+      <div id="mems"></div>
     </section>
 
-    <section class="card hide" id="view-agent">
+    <section class="card span2">
       <h1>Agent G2P</h1>
-      <p class="sub">Dual-engine draft → critic → edit. Math, build, life. Not Grok.</p>
+      <p class="sub">Dual-engine draft → critic → edit. Independent. Not Grok.</p>
       <textarea id="q" placeholder="solve 2x^2+3x-5=0"></textarea>
       <div class="row" style="margin-top:10px">
-        <label class="chk"><input type="checkbox" id="verify" /> Verify pass</label>
+        <label class="chk"><input type="checkbox" id="verify" /> Verify</label>
         <button type="button" class="primary" id="ask">Ask</button>
       </div>
       <pre id="ans"></pre>
     </section>
   </main>
-
   <script>
-    const KEY = "g2p-studio-lib-v4";
+    const KEY = "g2p-studio-v5";
+    const MEM = "g2p-studio-mem-v5";
     const MAP = {
-      text: [["t2t","Text to text"],["i2t","Image to text"],["v2t","Video to text"]],
-      image: [["still","Text to still"],["i2i","Image edit"],["v2i","Frame from video"]],
-      video: [["t2v","Text to video"],["i2v","Image to video"],["extend","Extend clip"]],
+      text: [["t2t","Text→text"],["i2t","Image→text"],["v2t","Video→text"]],
+      image: [["still","Text→still"],["i2i","Image edit"],["v2i","Frame from video"]],
+      video: [["t2v","Text→video"],["i2v","Image→video"],["extend","Extend clip"]],
     };
-    let group = "video", kind = "t2v", imageB64 = "", currentId = "";
+    let group = "video", kind = "t2v", imageB64 = "", currentId = "", activeUrl = "", activeKind = "video";
     const $ = (id) => document.getElementById(id);
-    const list = () => { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } };
-    const save = (a) => localStorage.setItem(KEY, JSON.stringify(a.slice(-50)));
+    const arts = () => { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } };
+    const saveArts = (a) => { localStorage.setItem(KEY, JSON.stringify(a.slice(-60))); renderLib(); counts(); };
+    const mems = () => { try { return JSON.parse(localStorage.getItem(MEM) || "[]"); } catch { return []; } };
+    const saveMem = (m) => { localStorage.setItem(MEM, JSON.stringify(m.slice(-40))); renderMem(); };
     async function api(url, opts) {
-      const r = await fetch(url, opts);
-      const t = await r.text();
+      const r = await fetch(url, opts); const t = await r.text();
       try { return JSON.parse(t); } catch { return { raw: t }; }
     }
     const frames = (s) => s <= 4 ? 81 : s <= 8 ? 121 : 161;
     const bar = (p) => { $("bar").style.width = Math.round(p * 100) + "%"; };
-
-    document.querySelectorAll("[data-view]").forEach((b) => {
-      b.onclick = () => {
-        document.querySelectorAll("[data-view]").forEach((x) => x.classList.toggle("on", x === b));
-        ["board","stage","lib","agent"].forEach((v) => {
-          const el = $("view-" + v);
-          if (!el) return;
-          const show = v === b.dataset.view || (b.dataset.view === "board" && v === "stage");
-          el.classList.toggle("hide", !show && !(b.dataset.view === "board" && v === "stage"));
-          if (b.dataset.view === "lib") { $("view-board").classList.add("hide"); $("view-stage").classList.add("hide"); }
-          if (b.dataset.view === "agent") { $("view-board").classList.add("hide"); $("view-stage").classList.add("hide"); }
-          if (b.dataset.view === "stage") $("view-board").classList.add("hide");
-          if (b.dataset.view === "board") { $("view-board").classList.remove("hide"); $("view-stage").classList.remove("hide"); }
-        });
-        if (b.dataset.view === "lib") renderLib();
-      };
-    });
+    function counts() { $("counts").textContent = arts().length + " in library"; }
 
     function paintModes() {
       $("modes").innerHTML = "";
       MAP[group].forEach(([id, lab]) => {
-        const btn = document.createElement("button");
-        btn.type = "button"; btn.className = "chip" + (kind === id ? " on" : "");
-        btn.textContent = lab;
-        btn.onclick = () => { kind = id; paintModes(); };
-        $("modes").appendChild(btn);
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "chip" + (kind === id ? " on" : ""); b.textContent = lab;
+        b.onclick = () => { kind = id; paintModes(); };
+        $("modes").appendChild(b);
       });
     }
     document.querySelectorAll("[data-g]").forEach((b) => {
       b.onclick = () => {
         group = b.dataset.g;
         document.querySelectorAll("[data-g]").forEach((x) => x.classList.toggle("on", x === b));
-        kind = MAP[group][0][0];
-        paintModes();
+        kind = MAP[group][0][0]; paintModes();
       };
     });
     paintModes();
     $("cSerana").onclick = () => $("cSerana").classList.toggle("on");
     $("cDanny").onclick = () => $("cDanny").classList.toggle("on");
-    $("dur").oninput = () => {
-      const s = Number($("dur").value);
-      $("durLab").textContent = s + "s · " + frames(s) + " frames";
-    };
+    $("dur").oninput = () => { const s = +$("dur").value; $("durLab").textContent = s + "s · " + frames(s) + " frames"; };
     $("file").onchange = () => {
-      const f = $("file").files[0];
-      if (!f) return;
+      const f = $("file").files[0]; if (!f) return;
       const r = new FileReader();
       r.onload = () => { imageB64 = String(r.result || ""); $("log").textContent = "Loaded " + f.name; };
       r.readAsDataURL(f);
@@ -249,33 +207,56 @@
     async function ping() {
       try {
         const s = await api("/api/studio");
-        if (s.hasApiKey) { $("ready").textContent = "WAN online · Agent G2P · no xAI"; $("ready").className = "ok"; }
-        else { $("ready").textContent = "Studio up · set RUNPOD_API_KEY then restart cluster"; $("ready").className = "bad"; }
+        if (s.hasApiKey) { $("ready").textContent = "WAN live · Agent G2P · no xAI"; $("ready").className = "ok"; }
+        else { $("ready").textContent = "Studio up · set RUNPOD_API_KEY then restart"; $("ready").className = "bad"; }
       } catch { $("ready").textContent = "Cluster offline"; $("ready").className = "bad"; }
     }
 
+    function show(url, k) {
+      activeUrl = url; activeKind = k || "video";
+      const img = k === "image" || k === "text" && false || ((k === "image" || kind === "still" || kind === "i2i") && !/mp4|webm|video\//i.test(url));
+      $("player").style.display = img || k === "text" ? "none" : "block";
+      $("still").style.display = img ? "block" : "none";
+      $("edit").style.display = "none";
+      $("editRow").style.display = img ? "grid" : "none";
+      if (img) { $("still").src = url; } else if (k !== "text") { $("player").src = url; }
+    }
+
     function renderLib() {
-      const items = list();
-      $("jobs").innerHTML = items.length ? "" : "<p class='sub'>Empty.</p>";
+      const items = arts();
+      $("jobs").innerHTML = items.length ? "" : "<p class='sub'>Empty library.</p>";
       items.slice().reverse().forEach((it) => {
-        const d = document.createElement("div");
-        d.className = "job";
-        d.innerHTML = "<strong>" + (it.kind || "") + "</strong> · " + (it.status || "") +
-          "<div>" + (it.prompt || "").slice(0, 160) + "</div>" +
-          (it.video ? "<button type='button' data-u>Play</button>" : "");
-        const b = d.querySelector("[data-u]");
-        if (b) b.onclick = () => show(it.video);
+        const d = document.createElement("div"); d.className = "job";
+        d.innerHTML = "<div><strong>" + (it.kind || "") + "</strong> · " + (it.status || "ready") +
+          "<div>" + (it.prompt || "").slice(0, 140) + "</div>" +
+          (it.url ? "<button type='button' data-p>Play</button> · <button type='button' data-d>Download</button>" : "") +
+          "</div>";
+        const p = d.querySelector("[data-p]"); const dl = d.querySelector("[data-d]");
+        if (p) p.onclick = () => show(it.url, it.media || "video");
+        if (dl) dl.onclick = () => downloadUrl(it.url, it.media);
         $("jobs").appendChild(d);
       });
     }
+    function renderMem() {
+      $("mems").innerHTML = mems().slice().reverse().map((m) =>
+        "<div class='mem'><strong>" + m.type + "</strong> · " + m.label + "<div>" + m.summary + "</div></div>"
+      ).join("") || "<p class='sub'>No frames yet.</p>";
+    }
+    function addMem(type, label, summary) {
+      saveMem(mems().concat([{ type, label, summary, at: Date.now() }]));
+    }
 
-    function show(url) {
+    async function downloadUrl(url, media) {
       if (!url) return;
-      const img = (kind === "still" || kind === "i2i" || kind === "v2i") && !/mp4|webm|video\//i.test(url);
-      $("still").classList.toggle("hide", !img);
-      $("player").classList.toggle("hide", img);
-      if (img) $("still").src = url; else $("player").src = url;
-      $("playUrl").value = url;
+      try {
+        if (url.startsWith("data:")) {
+          const a = document.createElement("a"); a.href = url; a.download = "g2p-" + (media || "file"); a.click();
+          return;
+        }
+        const r = await fetch(url); const b = await r.blob();
+        const a = document.createElement("a"); a.href = URL.createObjectURL(b);
+        a.download = "g2p." + (media === "image" ? "jpg" : "mp4"); a.click();
+      } catch { $("log").textContent = "Download failed (remote host blocked). Open the URL instead."; }
     }
 
     function promptText() {
@@ -285,7 +266,7 @@
       return t;
     }
 
-    async function generate(planOnly) {
+    async function generate(planOnly, queued) {
       const text = promptText();
       if (!text) { $("log").textContent = "Enter a direction."; return; }
       if (kind === "t2t" || kind === "i2t" || kind === "v2t") {
@@ -294,10 +275,14 @@
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text, verify: false, autoVideo: false }),
         });
-        $("log").textContent = r.content || JSON.stringify(r);
+        const content = r.content || JSON.stringify(r);
+        $("log").textContent = content;
+        saveArts(arts().concat([{ kind, status: "ready", prompt: text, url: "", media: "text", body: content, ts: Date.now() }]));
+        addMem("episodic", "Text", content.slice(0, 160));
         return;
       }
-      $("go").disabled = true; bar(0.1); $("log").textContent = planOnly ? "Director…" : "Submitting WAN 2.2…";
+      $("go").disabled = true; bar(0.1);
+      $("log").textContent = planOnly ? "Director…" : "WAN 2.2…";
       const body = {
         text, kind: (kind === "i2i" || kind === "v2i") ? "still" : kind,
         imageUrl: $("imageUrl").value.trim() || undefined,
@@ -318,7 +303,8 @@
           currentId = r.jobId; bar(0.28);
           $("jobMeta").textContent = (r.status || "IN_QUEUE") + " · " + r.jobId;
           $("log").textContent = (r.plan && r.plan.directedPrompt) || "Queued.";
-          save(list().concat([{ jobId: r.jobId, status: r.status, prompt: text, kind, ts: Date.now() }]));
+          saveArts(arts().concat([{ jobId: r.jobId, kind, status: r.status, prompt: text, ts: Date.now(), media: kind === "still" ? "image" : "video" }]));
+          addMem("echoic", "WAN submit", text.slice(0, 140));
           poll();
         } else {
           bar(0.12);
@@ -330,20 +316,28 @@
     }
 
     async function poll() {
-      if (!currentId) return;
+      if (!currentId) {
+        const last = arts().reverse().find((x) => x.jobId && !x.url && (x.status === "IN_QUEUE" || x.status === "IN_PROGRESS"));
+        if (last) currentId = last.jobId; else return;
+      }
       const r = await api("/api/video/status?id=" + encodeURIComponent(currentId));
       $("jobMeta").textContent = (r.status || "?") + " · " + currentId;
-      save(list().map((x) => x.jobId === currentId ? { ...x, status: r.status, video: r.video } : x));
+      saveArts(arts().map((x) => x.jobId === currentId ? { ...x, status: r.status, url: r.video || x.url } : x));
       if (r.status === "IN_QUEUE") bar(0.4);
       if (r.status === "IN_PROGRESS") bar(0.7);
-      if (r.video) { show(r.video); bar(1); }
+      if (r.video) {
+        const media = kind === "still" || kind === "i2i" ? "image" : "video";
+        show(r.video, media); bar(1);
+        addMem(media === "image" ? "iconic" : "echoic", "Complete", currentId);
+      }
       if (r.status === "IN_QUEUE" || r.status === "IN_PROGRESS") setTimeout(poll, 4000);
     }
 
     $("go").onclick = () => generate(false);
     $("plan").onclick = () => generate(true);
+    $("queueBtn").onclick = () => generate(false, true);
     $("poll").onclick = poll;
-    $("loadPlay").onclick = () => { const u = $("playUrl").value.trim(); if (u) show(u); };
+    $("dl").onclick = () => downloadUrl(activeUrl, activeKind);
     $("ask").onclick = async () => {
       const text = $("q").value.trim(); if (!text) return;
       $("ans").textContent = "Thinking…";
@@ -352,8 +346,27 @@
         body: JSON.stringify({ text, verify: $("verify").checked, autoVideo: false }),
       });
       $("ans").textContent = r.content || JSON.stringify(r, null, 2);
+      addMem("episodic", "Agent", (r.content || "").slice(0, 160));
     };
-    ping(); setInterval(ping, 12000);
+
+    const srcImg = new Image();
+    function applyEdit() {
+      if (!$("still").src) return;
+      const c = $("edit"); const ctx = c.getContext("2d");
+      srcImg.onload = () => {
+        c.width = srcImg.naturalWidth; c.height = srcImg.naturalHeight;
+        const b = 1 + $("br").value / 100, k = 1 + $("ct").value / 100;
+        ctx.filter = "brightness(" + b + ") contrast(" + k + ")";
+        ctx.drawImage(srcImg, 0, 0);
+        $("edit").style.display = "block"; $("still").style.display = "none";
+        activeUrl = c.toDataURL("image/jpeg", 0.92); activeKind = "image";
+      };
+      srcImg.src = $("still").src;
+    }
+    $("br").oninput = applyEdit; $("ct").oninput = applyEdit;
+
+    renderLib(); renderMem(); counts(); ping(); setInterval(ping, 12000);
+    poll();
   </script>
 </body>
 </html>
